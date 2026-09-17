@@ -46,9 +46,21 @@ export function readCommittedFirebaseIdentity(): { projectId?: string; databaseI
 }
 
 export function getFirebaseRuntimeIdentity(): FirebaseRuntimeIdentity {
+  const committed = readCommittedFirebaseIdentity();
+  if (committed.projectId) {
+    process.env.FIREBASE_PROJECT_ID = committed.projectId;
+    if (process.env.GOOGLE_CLOUD_PROJECT && process.env.GOOGLE_CLOUD_PROJECT !== committed.projectId) {
+      process.env.GOOGLE_CLOUD_PROJECT = committed.projectId;
+    }
+    if (process.env.GCLOUD_PROJECT && process.env.GCLOUD_PROJECT !== committed.projectId) {
+      process.env.GCLOUD_PROJECT = committed.projectId;
+    }
+  }
+  if (committed.databaseId) {
+    process.env.FIRESTORE_DATABASE_ID = committed.databaseId;
+  }
   const identity = resolveFirebaseRuntimeIdentity(process.env);
   if (!identity.emulator) {
-    const committed = readCommittedFirebaseIdentity();
     if (committed.projectId && committed.projectId !== identity.projectId) {
       throw new Error("FIREBASE_RUNTIME_PROJECT_MISMATCH:COMMITTED_CONFIG");
     }

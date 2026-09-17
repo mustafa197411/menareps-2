@@ -1,6 +1,6 @@
 {
-  "name": "August 4 new version ",
-  "description": "Enterprise Pharmaceutical CRM with Arabic/English localization, GPS verification, and embedded AI insights for MENA medical representatives.",
+  "name": "MENAREPS 2.0",
+  "description": "Enterprise Pharmaceutical Commercial Operations CRM Platform with territory alignment, order fulfillment, GPS-verified visits, and audit controls.",
   "requestFramePermissions": [
     "geolocation"
   ],

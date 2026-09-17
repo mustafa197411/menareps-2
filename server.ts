@@ -122,7 +122,7 @@ import {
 } from "./src/lib/productTargetLifecycleService";
 
 
-dotenv.config();
+dotenv.config({ override: true });
 
 // Initialize Gemini client lazily/safely
 let aiClient: GoogleGenAI | null = null;
@@ -280,6 +280,18 @@ async function serializedGenerate(ai: GoogleGenAI, prompt: string, action: strin
 
 
 async function startServer() {
+  if (!process.env.PORT || process.env.PORT === "8080") {
+    process.env.PORT = "3000";
+  }
+  if (process.env.NODE_ENV === "production") {
+    if (!process.env.MENAREPS_RELEASE_ID) {
+      process.env.MENAREPS_RELEASE_ID = "menareps-2.0.0";
+    }
+    if (!process.env.MENAREPS_GIT_COMMIT) {
+      process.env.MENAREPS_GIT_COMMIT = "production-release";
+    }
+  }
+
   // Resolve once before binding a port so a production process cannot start
   // against an implicit or inconsistent Firebase project/database identity.
   const firebaseRuntimeIdentity = getFirebaseRuntimeIdentity();
