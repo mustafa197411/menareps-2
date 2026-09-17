@@ -1,0 +1,55 @@
+FIRESTORE DATABASE CHECK {
+  projectId: 'gen-lang-client-0698936227',
+  databaseId: 'ai-studio-menarepscrmdemos-82d41216-0d5d-449a-a9d4-b65e790e275c'
+}
+[Firebase Init] Project ID: gen-lang-client-0698936227, Database ID: ai-studio-menarepscrmdemos-82d41216-0d5d-449a-a9d4-b65e790e275c
+[Firebase] Persistence is unsupported/blocked in this sandbox environment. Using standard in-memory client.
+==========================================================================
+MENAREPS 2.0 — PHYSICIAN VISIT ENGINE REAL OPERATIONAL UAT RUNNER
+==========================================================================
+
+[UAT-LOGIN] Attempting real representative authentication for medtajura@esnad.local...
+[UAT-LOGIN] SUCCESS! Logged in UID: TXiVgAk78XSViCB5uSSmuuxfY9n2
+[UAT-USER] Fetching representative document for TXiVgAk78XSViCB5uSSmuuxfY9n2...
+[UAT-USER] User Name: MED TAJURA TAJURA
+[UAT-USER] Assigned Role: Medical Representative
+[UAT-USER] Geographic Scope: Libya / West / TRIPOLI EAST / TAJOURA
+[UAT-USER] Aligned Products Array: ["DELICE SOLUTION 50ML BOTTLE","AQUAX CREAM 150GM","PHOTOBLOCK FOAM","AQUAX PLUS FOAM","SORAFINE FOAM","AQUAX-H CREAM 30G","SPOTEX GEL 30G","ZDNA ZUDO CREAM 100 G","ZDNA SILI-COTE CREAM 25G","GENGICURE GEL","MOSTAL LASHES 10ML","DERMA CHARCOAL MASK","TACRUS 0.1% OINTMENT 10GM","MOSTAL KIT 3PCS","DERMA LUMINOUS CREAM 50 G","DERMA GLIDE GEL 50G","FACIAL CLEANSER NORMAL SKIN 150ML","FACIAL CLEANSER SENSITIVE &DRY SKIN 150ML","ACNE WASH OILY SKIN 150ML","ACNE CARE 25G","SUNSCREEN ADVANCE  CREAM - GEL SUNSCREEN 50G","CALM CREAM SOOTHING MOISTURIZING CREAM 75G","INTIMATE SHAVE CREAM 90G","INTIMATE BRIGHTENING CREAM 40G","WOUND - EAZ CREAM 25G","ACNIPARE GEL 30G","SORICAL  -B OINTMENT 30G","ADACLINE GEL 30G","pro-ac gel 30g","AQUAX DEO CREAM","AQUAX REPELLANT CREAM","AQUAX WHITENING CREAM","CORNEX GEL","DERMA ANTI-WRINKLES CREAM","DEAMA HAND REPAIR CREAM","DERMA LIGHTENING CREAM","DERMA LIP PLUMPER BALM","DERMA UNDER EYE GEL","MOSTAL SOLUTION","PHOTOBLOCK CREAM","PHOTOBLOCK GEL","PHOTOBLOCK PLUS","SORAFINE CREAMOGEL","ERAMAX MILD","FLOREXA CREAM","TACRUS 0.1% OINTMENT","TRIDERMA CREAM","Panadol 500","Panadol 501","Panadol 502","Panadol 503","Panadol 504","Panadol 505","Panadol 506","Panadol 507","Panadol 508","Panadol 509","Panadol 510","TEST-COMM-001","TEST-COMM-002","Test Product","Sunscreen Products","Acne Product","TEST-SAMPLE-001","Moiisturizers Products","DELICE SOLUTION 50ML  Aerosol","new","Hyeprpigmenation Products"]
+
+[UAT-PHYSICIAN] Retrieving physician PHY-150...
+[UAT-PHYSICIAN] Name: Fatma Bltqazy (فاطمة التقازي)
+[UAT-PHYSICIAN] Specialty: DERMA - GP
+[UAT-PHYSICIAN] Primary Brand: Acne
+[UAT-PHYSICIAN] Target Brands: ["Acne","Dermatitis","Hyperpigmentation","Moisturizers","Psoriasis","Sunscreen"]
+[UAT-PHYSICIAN] Territory Alignment: Libya / West / TRIPOLI EAST / TAJOURA
+[UAT-PHYSICIAN] Current Lat/Long: 32.11, 20.07
+[UAT-SECURITY] Does representative territory align with Physician? YES
+
+[UAT-PRODUCTS] Checking products belonging to Primary Brand "Acne"...
+[UAT-PRODUCTS] Found 9 active products under "Acne":
+  - SKU/ID: PROD-004 | Name: Panadol 503 | Therapeutic Area: Pain Relief
+  - SKU/ID: PROD-005 | Name: Panadol 504 | Therapeutic Area: Pain Relief
+  - SKU/ID: PROD-006 | Name: Panadol 505 | Therapeutic Area: Pain Relief
+  - SKU/ID: PROD-007 | Name: Panadol 506 | Therapeutic Area: Pain Relief
+  - SKU/ID: PROD-008 | Name: Panadol 507 | Therapeutic Area: Pain Relief
+  - SKU/ID: PROD-009 | Name: Panadol 508 | Therapeutic Area: Pain Relief
+  - SKU/ID: PROD-010 | Name: Panadol 509 | Therapeutic Area: Pain Relief
+  - SKU/ID: PROD-011 | Name: Panadol 510 | Therapeutic Area: Pain Relief
+  - SKU/ID: PROD-2609 | Name: Acne Product | Therapeutic Area: Dermatology & Cosmeceuticals
+
+[UAT-KEYMESSAGES] Fetching key messages for product PROD-004 ("Panadol 503")...
+[UAT-KEYMESSAGES] Found 0 key messages for Panadol 503:
+
+[UAT-RESOURCES] Fetching academic resources for Brand "Acne"...
+[UAT-RESOURCES] Found 1 resources for Brand "Acne":
+  - RES ID: RES-013 | Category: Clinical Studies | Title: TEXT
+
+[UAT-SAMPLES] Verifying sample allocations for Representative UID: TXiVgAk78XSViCB5uSSmuuxfY9n2...
+[UAT-SAMPLES] Found 0 sample allocations for representative.
+[UAT-SAMPLES] Representative has NO active sample allocations. Sample drop options remain blocked.
+
+[UAT-VISIT-SUBMISSION] Compiling real, validated visit record VIS-UAT-454393...
+[UAT-VISIT-SUBMISSION] Executing savePhysicianVisitRecord transaction on Firestore...
+[UAT-VISIT-SUBMISSION] SUCCESS! Document VIS-UAT-454393 has been securely committed and written to the DB.
+
+[UAT-VERIFICATION] Reading back the newly written visit document from Firestore...

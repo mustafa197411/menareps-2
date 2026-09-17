@@ -1,0 +1,6 @@
+import { auth } from "./firebase";
+async function command(path: string, body: unknown) { const token = await auth.currentUser?.getIdToken(); if (!token) throw new Error("AUTHENTICATED_SAMPLE_ACTOR_REQUIRED"); const response = await fetch(path, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) }); const payload = await response.json().catch(() => ({})); if (!response.ok || payload.success !== true) throw new Error(payload.code || "SAMPLE_MUTATION_FAILED"); return payload; }
+export const allocateSampleStock = (input: { idempotencyKey: string; repId: string; sampleSkuId: string; quantity: number; requestId?: string }) => command("/api/samples/allocations", input);
+export const mutateSampleVariant = (input: Record<string, unknown>) => command("/api/samples/variants", input);
+export const receiveSampleStock = (input: { idempotencyKey: string; sampleSkuId: string; batchNumber: string; expiryDate: string; quantity: number; reference?: string }) => command("/api/samples/receipts", input);
+export const adjustSampleStock = (input: { idempotencyKey: string; sampleSkuId: string; batchId: string; targetAvailableQuantity: number; reason: string; notes?: string }) => command("/api/samples/adjustments", input);

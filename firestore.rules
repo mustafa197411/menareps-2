@@ -1,0 +1,1327 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // 0. GLOBAL CATCH-ALL DEFAULT DENY (MASTER SAFE GUARD)
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // 1. STANDALONE REUSABLE HELPERS (PRIMITIVE AND ABAC DEFINITIONS)
+    // =========================================================================
+    
+    // Check if user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Access current authenticated user profile attributes directly from DB safely
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check if user profile exists to prevent unauthorized reads
+    function hasUserProfile() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Light-weight role check (assumes user is signed in and has profile)
+    function checkRole(roleName) {
+      return getUserData().get('role', '') == roleName;
+    }
+
+    // Check if user has a specific operational role
+    function hasRole(roleName) {
+      return isSignedIn() && hasUserProfile() && checkRole(roleName);
+    }
+
+    // Check if user profile is active
+    function isActiveUser() {
+      let userData = getUserData();
+      return isSignedIn() && hasUserProfile() &&
+        userData.get('active', true) == true &&
+        userData.get('active', '') != 'false' &&
+        (!userData.keys().hasAny(['status']) || userData.get('status', 'Active') in ['Active', 'Operational']);
+    }
+
+    function isSalesRep() {
+      return checkRole("Sales Representative");
+    }
+
+    function isMedicalRep() {
+      return checkRole("Medical Representative");
+    }
+
+    function hasCanonicalAreaAccess(areaId) {
+      return isSignedIn() &&
+             hasUserProfile() &&
+             getUserData().get('active', true) == true &&
+             getUserData().get('areaIds', []) is list &&
+             areaId is string &&
+             areaId in getUserData().get('areaIds', []);
+    }
+
+    // Check if user is authorized for a country
+    function isAuthorizedForCountry(countryId) {
+      return isActiveUser() && (
+        isAdmin() ||
+        getUserData().get('country', '') == countryId ||
+        (getUserData().get('country', '') == 'Libya' && (countryId == 'LY' || countryId == 'Libya')) ||
+        (getUserData().get('country', '') == 'LY' && (countryId == 'LY' || countryId == 'Libya')) ||
+        (getUserData().get('assignedCountries', '') is list && (
+          countryId in getUserData().get('assignedCountries', []) ||
+          ('Libya' in getUserData().get('assignedCountries', []) && (countryId == 'LY' || countryId == 'Libya')) ||
+          ('LY' in getUserData().get('assignedCountries', []) && (countryId == 'LY' || countryId == 'Libya'))
+        )) ||
+        (getUserData().get('assignedCountries', '') is string && (
+          getUserData().get('assignedCountries', '') == countryId ||
+          (getUserData().get('assignedCountries', '') == 'Libya' && (countryId == 'LY' || countryId == 'Libya')) ||
+          (getUserData().get('assignedCountries', '') == 'LY' && (countryId == 'LY' || countryId == 'Libya'))
+        ))
+      );
+    }
+
+    // Approved enterprise roles for management scope
+    function isEnterpriseRole() {
+      return isActiveUser() && (
+        isAdmin() ||
+        isManager() ||
+        isSupervisor() ||
+        isFinance() ||
+        isWarehouse() ||
+        isDelivery() ||
+        isOrderOps() ||
+        checkRole("Product Manager") ||
+        checkRole("Marketing Manager")
+      );
+    }
+
+    // Elevated Admin / Super Admin Concept
+    function isAdmin() {
+      let userData = getUserData();
+      return isSignedIn() && hasUserProfile() &&
+        userData.get('active', true) == true &&
+        userData.get('active', '') != 'false' &&
+        (!userData.keys().hasAny(['status']) || userData.get('status', 'Active') in ['Active', 'Operational']) && (
+        userData.get('role', '') in ["Admin", "Super Admin"]
+      );
+    }
+
+    // Role-based authorization gates
+    function isRep() {
+      return checkRole("Medical Representative") || checkRole("Sales Representative");
+    }
+
+    // Check if supervisor role is active
+    function isSupervisor() {
+      return checkRole("Medical Supervisor") || checkRole("Sales Supervisor") || checkRole("Area Sales Manager");
+    }
+
+    // Check if manager role is active
+    function isManager() {
+      return checkRole("Regional Manager") || checkRole("Country Manager") || checkRole("General Manager") ||
+        checkRole("Sales & Marketing Manager") || checkRole("Marketing Manager") || checkRole("Sales Manager");
+    }
+
+    // Check if user role is authorized to manage brochure hotspot definitions
+    function isHotspotContentManager() {
+      return isAdmin() ||
+             checkRole("Product Manager") ||
+             checkRole("Medical Manager") ||
+             checkRole("Marketing Manager") ||
+             checkRole("Sales & Marketing Manager");
+    }
+
+    // Check if user role is authorized to manage academic resource materials
+    function isResourceContentManager() {
+      let role = getUserData().get('role', '');
+      return isActiveUser() &&
+        exists(/databases/$(database)/documents/rolePermissions/$(role)) &&
+        get(/databases/$(database)/documents/rolePermissions/$(role)).data
+          .get('resourceCapabilities', {}).get('manage', false) == true;
+    }
+
+    function isValidAcademicResource() {
+      return incoming().get('resourceId', '') is string &&
+             incoming().get('promotionGroupId', '') is string &&
+             incoming().get('promotionGroupId', '').size() > 0 &&
+             incoming().get('productIds', []) is list &&
+             incoming().get('specialtyIds', []) is list &&
+             incoming().get('resourceScope', '') in ['PROMOTION_GROUP', 'SELECTED_PRODUCTS'] &&
+             (incoming().get('resourceScope', '') == 'SELECTED_PRODUCTS' ? incoming().get('productIds', []).size() > 0 : true) &&
+             incoming().get('uploadStatus', '') in ['PENDING', 'UPLOADING', 'PROCESSING', 'COMPLETE', 'FAILED', 'REPLACED', 'ARCHIVED'] &&
+             incoming().get('fileSizeBytes', 0) is number &&
+             incoming().get('active', true) is bool &&
+             incoming().get('fileVersion', 1) is int &&
+             incoming().get('fileVersion', 1) >= 1;
+    }
+
+    // Check if finance role is active
+    function isFinance() {
+      return checkRole("Finance Officer") || checkRole("Finance Manager");
+    }
+
+    // Check if warehouse role is active
+    function isWarehouse() {
+      return checkRole("Warehouse / Inventory") || checkRole("Warehouse Manager") || checkRole("Store Manager") || checkRole("Inventory Officer");
+    }
+
+    function hasSampleCapability(capability, defaultValue) {
+      let role = getUserData().get('role', '');
+      return isSignedIn() && hasUserProfile() &&
+        (!exists(/databases/$(database)/documents/rolePermissions/$(role)) ? defaultValue :
+          get(/databases/$(database)/documents/rolePermissions/$(role)).data
+            .get('sampleCapabilities', {}).get(capability, defaultValue)) == true;
+    }
+
+    function isSampleMasterManager() {
+      return isActiveUser() && isAdmin() && hasSampleCapability('CREATE_SAMPLE_SKU', true);
+    }
+
+    function isSampleInventoryOperator() {
+      let fallback = isAdmin() || checkRole("Warehouse Manager") || checkRole("Inventory Officer") || checkRole("Warehouse / Inventory") || checkRole("Store Manager");
+      return isActiveUser() && hasSampleCapability('VIEW_SAMPLE_INVENTORY', fallback);
+    }
+
+    function canReceiveSampleStock() {
+      let fallback = isAdmin() || checkRole("Warehouse Manager") || checkRole("Inventory Officer") || checkRole("Warehouse / Inventory") || checkRole("Store Manager");
+      return isActiveUser() && hasSampleCapability('RECEIVE_SAMPLE_STOCK', fallback);
+    }
+
+    function canAdjustSampleStock() {
+      let fallback = isAdmin() || checkRole("Warehouse Manager") || checkRole("Inventory Officer") || checkRole("Warehouse / Inventory") || checkRole("Store Manager");
+      return isActiveUser() && hasSampleCapability('ADJUST_SAMPLE_STOCK', fallback);
+    }
+
+    function canAllocateSampleStock() {
+      let fallback = isAdmin() || checkRole("General Manager") || checkRole("Regional Manager") || checkRole("Country Manager") || checkRole("Sales & Marketing Manager") || checkRole("Sales Manager") || checkRole("Area Sales Manager") || checkRole("Sales Supervisor") || checkRole("Medical Manager") || checkRole("Medical Supervisor");
+      return isActiveUser() && hasSampleCapability('ALLOCATE_SAMPLE_STOCK', fallback);
+    }
+
+    function isSampleApprovalManager() {
+      let role = getUserData().get('role', '');
+      let fallback = isAdmin() || role in [
+        "General Manager", "Regional Manager", "Country Manager",
+        "Sales & Marketing Manager", "Medical Manager", "Medical Supervisor"
+      ];
+      return isActiveUser() && hasSampleCapability('APPROVE_SAMPLE_REQUEST', fallback);
+    }
+
+    function isValidSampleApproval(data) {
+      let requestId = data.get('requestId', '');
+      let requestPath = /databases/$(database)/documents/sampleRequests/$(requestId);
+      let requestData = get(requestPath).data;
+      return requestId is string &&
+        exists(requestPath) &&
+        requestData.get('status', '') == 'PENDING_APPROVAL' &&
+        canonicalRequestRep(requestData) == data.get('repId', '') &&
+        data.get('approverId', '') == request.auth.uid &&
+        data.get('repId', '') != request.auth.uid &&
+        (isAdmin() || checkRole("General Manager") || isSubordinateOfActor(data.get('repId', ''))) &&
+        data.get('decision', '') in ['APPROVED', 'REJECTED'] &&
+        data.get('approvedQuantity', 0) is int && data.get('approvedQuantity', 0) >= 0 &&
+        data.get('approvedQuantity', 0) <= requestData.get('quantityRequested', 0) &&
+        data.get('sampleSkuId', '') == requestData.get('sampleSkuId', '') &&
+        data.get('productId', '') == requestData.get('productId', '') &&
+        data.get('quantityRequested', 0) == requestData.get('quantityRequested', 0) &&
+        (data.get('decision', '') != 'APPROVED' || data.get('approvedQuantity', 0) > 0) &&
+        (data.get('decision', '') != 'REJECTED' || data.get('rejectionReason', '').size() > 0);
+    }
+
+    function preservesSampleRequestIdentity(before, after) {
+      return canonicalRequestRep(after) == canonicalRequestRep(before) &&
+        after.get('requesterId', '') == before.get('requesterId', '') &&
+        after.get('sampleSkuId', '') == before.get('sampleSkuId', '') &&
+        after.get('productId', '') == before.get('productId', '') &&
+        after.get('quantityRequested', 0) == before.get('quantityRequested', 0);
+    }
+
+    function isValidSelfSampleRequestCancellation(before, after) {
+      return canonicalRequestRep(before) == request.auth.uid &&
+        before.get('status', '') == 'PENDING_APPROVAL' &&
+        after.get('status', '') == 'CANCELLED' &&
+        preservesSampleRequestIdentity(before, after);
+    }
+
+    function isValidManagedSampleRequestUpdate(before, after) {
+      let allocator = canAllocateSampleStock();
+      return allocator &&
+        canAccessSampleRep(canonicalRequestRep(before)) &&
+        preservesSampleRequestIdentity(before, after) &&
+        after.get('status', '') in ['PARTIALLY_ALLOCATED', 'ALLOCATED'];
+    }
+
+    function hasSampleOrgScope() {
+      return isAdmin() || checkRole("General Manager");
+    }
+
+    function canAccessSampleRep(targetRepId) {
+      return isSignedIn() && targetRepId is string && (
+        targetRepId == request.auth.uid || hasSampleOrgScope() || isSampleInventoryOperator() ||
+        (isSampleApprovalManager() && isSubordinateOfActor(targetRepId)) ||
+        ((hasSampleCapability('VIEW_TEAM_SAMPLE_BALANCE', false) || canAllocateSampleStock()) && isSubordinateOfActor(targetRepId))
+      );
+    }
+
+    function canonicalRequestRep(data) {
+      return data.get('repId', data.get('requesterId', ''));
+    }
+
+    function isValidCanonicalSampleRequest(data) {
+      return canonicalRequestRep(data) is string && canonicalRequestRep(data).size() > 0 &&
+        data.get('sampleSkuId', '') is string && data.get('sampleSkuId', '').size() > 0 &&
+        data.get('productId', '') is string && data.get('productId', '').size() > 0 &&
+        data.get('quantityRequested', 0) is int && data.get('quantityRequested', 0) > 0 &&
+        data.get('reason', '') is string && data.get('reason', '').size() > 0 &&
+        data.get('createdBy', '') == request.auth.uid &&
+        data.get('status', '') == 'PENDING_APPROVAL' &&
+        data.get('source', '') in ['STANDALONE', 'PHYSICIAN_VISIT'];
+    }
+
+    function isValidCanonicalSampleAllocation(data) {
+      return data.get('repId', '') is string && data.get('repId', '').size() > 0 &&
+        data.get('sampleSkuId', '') is string && data.get('sampleSkuId', '').size() > 0 &&
+        data.get('productId', '') is string && data.get('productId', '').size() > 0 &&
+        data.get('quantityAllocated', 0) is int && data.get('quantityAllocated', 0) > 0 &&
+        data.get('quantityDistributed', -1) == 0 &&
+        data.get('quantityRemaining', -1) == data.get('quantityAllocated', 0) &&
+        data.get('allocatedBy', '') == request.auth.uid &&
+        data.get('status', '') == 'ACTIVE';
+    }
+
+    // Check if delivery role is active
+    function isDelivery() {
+      return checkRole("Delivery Officer");
+    }
+
+    // Check if order ops role is active
+    function isOrderOps() {
+      return checkRole("Order Operations Officer");
+    }
+
+    // Reference helpers for active and incoming payloads
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Reference helpers for existing stored documents
+    function existing() {
+      return resource.data;
+    }
+
+    // Protect document ID length and character safety
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function canBridgeOperationalHierarchy(userData) {
+      return userData.get('role', '') in [
+        "General Manager", "Regional Manager", "Country Manager", "Sales & Marketing Manager",
+        "Sales Manager", "Area Sales Manager", "Sales Supervisor", "Medical Manager", "Medical Supervisor"
+      ];
+    }
+
+    // Bounded canonical UID ancestor chain for operational hierarchy reads.
+    // Email is display/contact metadata and never expands runtime authority.
+    function isSubordinateOfActor(targetUserId) {
+      let targetPath = /databases/$(database)/documents/users/$(targetUserId);
+      let targetData = get(targetPath).data;
+      let manager1Id = targetData.get('managerId', '');
+      let manager1Data = get(/databases/$(database)/documents/users/$(manager1Id)).data;
+      let manager2Id = manager1Data.get('managerId', '');
+      let manager2Data = get(/databases/$(database)/documents/users/$(manager2Id)).data;
+      let manager3Id = manager2Data.get('managerId', '');
+      let manager3Data = get(/databases/$(database)/documents/users/$(manager3Id)).data;
+      return exists(targetPath) && (
+        manager1Id == request.auth.uid ||
+        (manager1Id != '' && exists(/databases/$(database)/documents/users/$(manager1Id)) && canBridgeOperationalHierarchy(manager1Data) && manager2Id == request.auth.uid) ||
+        (manager2Id != '' && exists(/databases/$(database)/documents/users/$(manager2Id)) && canBridgeOperationalHierarchy(manager1Data) && canBridgeOperationalHierarchy(manager2Data) && manager3Id == request.auth.uid) ||
+        (manager3Id != '' && exists(/databases/$(database)/documents/users/$(manager3Id)) && canBridgeOperationalHierarchy(manager1Data) && canBridgeOperationalHierarchy(manager2Data) && canBridgeOperationalHierarchy(manager3Data) && manager3Data.get('managerId', '') == request.auth.uid)
+      );
+    }
+
+    function isValidUserProductAssignment(data) {
+      return data.get('assignmentId', '') is string && data.get('assignmentId', '').size() <= 128 &&
+             data.get('userId', '') is string && data.get('userId', '').size() <= 128 &&
+             data.get('productId', '') is string && data.get('productId', '').size() <= 128 &&
+             data.get('productGroupId', '') is string && data.get('productGroupId', '').size() <= 128 &&
+             data.get('therapeuticArea', '') is string && data.get('therapeuticArea', '').size() <= 128 &&
+             data.get('assignmentType', '') is string && (data.get('assignmentType', '') == 'medical' || data.get('assignmentType', '') == 'sales' || data.get('assignmentType', '') == 'both') &&
+             data.get('status', '') is string && (data.get('status', '') == 'Active' || data.get('status', '') == 'Inactive') &&
+             (data.get('active', true) == true || data.get('active', true) == false);
+    }
+
+    // =========================================================================
+    // 2. DATA VALIDATION BLUEPRINTS (ANTI-VALUE POISONING SCHEMA ENFORCERS)
+    // =========================================================================
+
+    function isValidUser(data) {
+      return (!data.keys().hasAll(['id']) || (data.id is string && data.id.size() <= 128)) &&
+             (!data.keys().hasAll(['name']) || (data.name is string && data.name.size() <= 200)) &&
+             (!data.keys().hasAll(['email']) || (data.email is string && data.email.size() <= 200));
+    }
+
+    // Safe self-created user profile allowlist schema check
+    function isSafeSelfUserProfile(data) {
+      return data.keys().hasOnly(['id', 'uid', 'email', 'name', 'displayName', 'photoURL', 'createdAt', 'updatedAt']) &&
+             (!data.keys().hasAll(['email']) || (request.auth.token.email != null && data.email == request.auth.token.email)) &&
+             (!data.keys().hasAll(['id']) || data.id == request.auth.uid) &&
+             (!data.keys().hasAll(['uid']) || data.uid == request.auth.uid) &&
+             !data.keys().hasAny([
+               'role', 'roles', 'securityScope', 'permissions', 'isAdmin', 'admin', 'superAdmin',
+               'managedRoles', 'assignedCountries', 'areaIds', 'productIds', 'active', 'status',
+               'managerId', 'managerEmail', 'approvalStatus'
+             ]);
+    }
+
+    function isValidPhysician(data) {
+      return (!data.keys().hasAll(['id']) || (data.id is string && data.id.size() <= 128)) &&
+             (!data.keys().hasAll(['name']) || (data.name is string && data.name.size() <= 200));
+    }
+
+    function isValidPharmacy(data) {
+      return (!data.keys().hasAll(['id']) || (data.id is string && data.id.size() <= 128)) &&
+             (!data.keys().hasAll(['name']) || (data.name is string && data.name.size() <= 200)) &&
+             (!data.keys().hasAll(['nameEn']) || (data.nameEn is string && data.nameEn.size() <= 200));
+    }
+
+    function isValidOrder(data) {
+      return (!data.keys().hasAll(['id']) || (data.id is string && data.id.size() <= 128)) &&
+             (!data.keys().hasAll(['pharmacyId']) || data.pharmacyId is string) &&
+             (!data.keys().hasAll(['total']) || data.total is number) &&
+             (!data.keys().hasAll(['status']) || data.status is string);
+    }
+
+    function isOrderInFinanceStage(data) {
+      return !data.keys().hasAny(['stage', 'status']) ||
+             data.get('stage', '') == 'FINANCE_REVIEW' ||
+             data.get('stage', '') == 'INVENTORY_RESERVATION' ||
+             data.get('stage', '') == 'SUBMISSION' ||
+             data.get('status', '') == 'Pending Financial Review' ||
+             data.get('status', '') == 'PENDING_FINANCE_REVIEW' ||
+             data.get('status', '') == 'INVENTORY_RESERVED' ||
+             data.get('status', '') == 'Pending Supervisor Review' ||
+             data.get('status', '') == 'FINANCE_APPROVED' ||
+             data.get('status', '') == 'FINANCE_REJECTED' ||
+             data.get('status', '') == 'Returned to Rep' ||
+             data.get('status', '') == 'RETURNED_TO_FINANCE' ||
+             data.get('status', '') == 'RETURNED_TO_REP_BY_FINANCE';
+    }
+
+    function isOrderInOpsStage(data) {
+      return !data.keys().hasAny(['stage', 'status']) ||
+             data.get('stage', '') == 'OPERATIONS_REVIEW' ||
+             data.get('stage', '') == 'SUBMISSION' ||
+             data.get('status', '') == 'Pending Ops Validation' ||
+             data.get('status', '') == 'PENDING_OPERATIONS_REVIEW' ||
+             data.get('status', '') == 'Pending Supervisor Review' ||
+             data.get('status', '') == 'OPERATIONS_APPROVED' ||
+             data.get('status', '') == 'OPERATIONS_REJECTED' ||
+             data.get('status', '') == 'Returned to Finance';
+    }
+
+    function isValidVisit(data) {
+      return (!data.keys().hasAll(['id']) || (data.id is string && data.id.size() <= 128)) &&
+             (!data.keys().hasAll(['date']) || data.date is string) &&
+             data.get('repId', '') is string && data.get('repId', '').size() > 0 &&
+             data.get('physicianId', '') is string && data.get('physicianId', '').size() > 0;
+    }
+
+    function isOwnScopedMedicalVisit(data) {
+      let physicianPath = /databases/$(database)/documents/physicians/$(data.get('physicianId', ''));
+      return isActiveUser() && isMedicalRep() && data.get('repId', '') == request.auth.uid &&
+        exists(physicianPath) &&
+        hasCanonicalAreaAccess(get(physicianPath).data.get('areaId', ''));
+    }
+
+    function isValidPlannerVisit(data) {
+      return (!data.keys().hasAll(['id']) || (data.id is string && data.id.size() <= 128)) &&
+             (!data.keys().hasAll(['repId']) || data.repId is string);
+    }
+
+    function isValidNotification(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.notificationId is string &&
+             data.title is string && data.title.size() <= 200 &&
+             data.status is string;
+    }
+
+    function isValidProductPromotionGroup(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 200 &&
+             data.normalizedName is string && data.normalizedName.size() <= 200;
+    }
+
+    function isValidDetailingMaterialUsage(data) {
+      return data.get('visitId', '') is string && data.get('visitId', '').size() <= 128 &&
+             data.get('physicianId', '') is string && data.get('physicianId', '').size() <= 128 &&
+             data.get('representativeUid', '') is string && data.get('representativeUid', '').size() <= 128 &&
+             data.get('productId', '') is string && data.get('productId', '').size() <= 128 &&
+             data.get('materialId', '') is string && data.get('materialId', '').size() <= 128 &&
+             data.get('status', '') is string && (data.get('status', '') == 'OPEN' || data.get('status', '') == 'CLOSED') &&
+             data.get('durationSeconds', 0) is number;
+    }
+
+    function isValidDetailingPageAnalytics(data) {
+      return data.get('usageSessionId', '') is string && data.get('usageSessionId', '').size() <= 128 &&
+             data.get('visitId', '') is string && data.get('visitId', '').size() <= 128 &&
+             data.get('physicianId', '') is string && data.get('physicianId', '').size() <= 128 &&
+             data.get('representativeUid', '') is string && data.get('representativeUid', '').size() <= 128 &&
+             data.get('productId', '') is string && data.get('productId', '').size() <= 128 &&
+             data.get('materialId', '') is string && data.get('materialId', '').size() <= 128 &&
+             data.get('pageNumber', 0) is number &&
+             data.get('pageVisitIndex', 0) is number &&
+             data.get('durationSeconds', 0) is number;
+    }
+
+    function isValidPhysicianSpecialty(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 200 &&
+             data.normalizedName is string && data.normalizedName.size() <= 200;
+    }
+
+    function isValidDetailingHotspotDefinition(data) {
+      return data.get('hotspotId', '') is string && data.get('hotspotId', '').size() <= 128 &&
+             data.get('materialId', '') is string && data.get('materialId', '').size() <= 128 &&
+             data.get('productId', '') is string && data.get('productId', '').size() <= 128 &&
+             data.get('promotionGroupId', '') is string && data.get('promotionGroupId', '').size() <= 128 &&
+             data.get('pageNumber', 0) is number && data.get('pageNumber', 0) > 0 &&
+             data.get('hotspotName', '') is string && data.get('hotspotName', '').size() > 0 && data.get('hotspotName', '').size() <= 200 &&
+             data.get('hotspotType', '') is string && (
+               data.get('hotspotType', '') == 'KEY_MESSAGE' ||
+               data.get('hotspotType', '') == 'PRODUCT_CLAIM' ||
+               data.get('hotspotType', '') == 'PRODUCT_FEATURE' ||
+               data.get('hotspotType', '') == 'CLINICAL_EVIDENCE' ||
+               data.get('hotspotType', '') == 'SAFETY_INFORMATION' ||
+               data.get('hotspotType', '') == 'DOSAGE_INFORMATION' ||
+               data.get('hotspotType', '') == 'PRODUCT_IMAGE' ||
+               data.get('hotspotType', '') == 'NAVIGATION' ||
+               data.get('hotspotType', '') == 'GENERAL_CONTENT'
+             ) &&
+             data.get('xPercent', -1) is number && data.get('xPercent', -1) >= 0 && data.get('xPercent', -1) <= 100 &&
+             data.get('yPercent', -1) is number && data.get('yPercent', -1) >= 0 && data.get('yPercent', -1) <= 100 &&
+             data.get('widthPercent', 0) is number && data.get('widthPercent', 0) > 0 && data.get('widthPercent', 0) <= 100 &&
+             data.get('heightPercent', 0) is number && data.get('heightPercent', 0) > 0 && data.get('heightPercent', 0) <= 100 &&
+             (data.get('xPercent', 0) + data.get('widthPercent', 0)) <= 100 &&
+             (data.get('yPercent', 0) + data.get('heightPercent', 0)) <= 100 &&
+             data.get('active', true) is bool &&
+             data.get('version', 0) is number && data.get('version', 0) >= 1 &&
+             data.get('createdByUid', '') is string && data.get('createdByUid', '').size() <= 128 &&
+             data.get('updatedByUid', '') is string && data.get('updatedByUid', '').size() <= 128;
+    }
+
+    // =========================================================================
+    // 3. SECURE COLLECTION MATCH BLOCKS
+    // =========================================================================
+
+    // 3.1 USERS & PROFILE MANAGEMENT
+    match /users/{userId} {
+      allow get: if isSignedIn() && (
+        request.auth.uid == userId ||
+        resource.data.get('email', '') == request.auth.token.email ||
+        (hasUserProfile() && getUserData().get('managerId', '') == userId)
+      );
+      allow get: if isSignedIn() && isAdmin();
+      allow get: if isActiveUser() && (isManager() || isSupervisor() || checkRole("Medical Manager")) && isSubordinateOfActor(userId);
+
+      allow list: if isSignedIn() && isAdmin();
+      allow list: if isSignedIn() && resource.data.get('email', '') == request.auth.token.email;
+      allow list: if isActiveUser() && (isManager() || isSupervisor() || checkRole("Medical Manager")) &&
+        resource.data.get('managerId', '') == request.auth.uid;
+
+      // Safe self-profile creation: cannot set role, status, active, permissions, or assignments
+      allow create: if isSignedIn() && request.auth.uid == userId && isSafeSelfUserProfile(incoming());
+      // Admin creation: full profile with role, active status, security scope, assignments, etc.
+      allow create: if isSignedIn() && isAdmin() && isValidUser(incoming());
+
+      allow update: if isSignedIn() &&
+        resource.data.get('email', '') == request.auth.token.email &&
+        request.auth.uid != userId &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['isDeleted', 'linkedToUid']) &&
+        isValidUser(incoming());
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) && !incoming().diff(existing()).affectedKeys().hasAny([
+        'role', 'roles', 'securityScope', 'permissions', 'isAdmin', 'admin', 'superAdmin',
+        'managedRoles', 'assignedCountries', 'areaIds', 'productIds', 'active', 'status',
+        'managerId', 'managerEmail', 'approvalStatus'
+      ]);
+      allow update: if isSignedIn() && isAdmin() && isValidUser(incoming());
+
+      allow delete: if isAdmin();
+    }
+
+    // 3.1.1 USER ACTIVATION PROFILES (Deterministic Lookup)
+    match /userActivationProfiles/{emailKey} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+      allow update: if isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['used', 'linkedToUid', 'linkedAt']);
+    }
+
+    // 3.1.2 DELIVERY OFFICER DIRECTORY (Scoped collection for store managers & staff to assign delivery officers)
+    match /deliveryOfficerDirectory/{officerId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && (isAdmin() || isManager() || isSupervisor() || isWarehouse() || isOrderOps());
+    }
+
+    // 3.2 PHYSICIANS MASTER REGISTER
+    match /physicians/{physicianId} {
+      allow get: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() ||
+        hasCanonicalAreaAccess(resource.data.get('areaId', resource.data.get('area', resource.data.get('territory', '')))) ||
+        (isRep() && (resource.data.get('assignedRepId', '') == request.auth.uid || getUserData().get('areaNames', []).hasAny([resource.data.get('area', ''), resource.data.get('territory', '')]))) ||
+        resource.data.get('assignedRepId', '') == request.auth.uid
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() ||
+        hasCanonicalAreaAccess(resource.data.get('areaId', resource.data.get('area', resource.data.get('territory', '')))) ||
+        (isRep() && (resource.data.get('assignedRepId', '') == request.auth.uid || getUserData().get('areaNames', []).hasAny([resource.data.get('area', ''), resource.data.get('territory', '')]))) ||
+        resource.data.get('assignedRepId', '') == request.auth.uid
+      );
+      // Put the owning representative path first. Apart from reflecting the
+      // business rule, this avoids spending the multi-document transaction
+      // access-call budget evaluating unrelated elevated-role branches.
+      allow create: if isActiveUser() && (isAdmin() || isSupervisor() || isManager()) && isValidPhysician(incoming());
+      allow update: if isActiveUser() && (
+        isAdmin() || isSupervisor() || isManager() ||
+        (isMedicalRep() && hasCanonicalAreaAccess(existing().get('areaId', '')) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['lastVisitDate', 'lastVisitStatus', 'updatedAt', 'updatedBy']))
+      ) && isValidPhysician(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // 3.3 PHARMACIES MASTER REGISTER
+    match /pharmacies/{pharmacyId} {
+      allow get: if isSignedIn() && (
+        isAdmin() ||
+        isManager() ||
+        isSupervisor() ||
+        isFinance() ||
+        isRep() ||
+        ((isWarehouse() || isDelivery() || isOrderOps()) && isAuthorizedForCountry(resource.data.get('countryId', resource.data.get('country', 'Libya')))) ||
+        hasCanonicalAreaAccess(resource.data.get('areaId', resource.data.get('area', resource.data.get('territory', ''))))
+      );
+
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        isManager() ||
+        isSupervisor() ||
+        isFinance() ||
+        isRep() ||
+        ((isWarehouse() || isDelivery() || isOrderOps()) && isAuthorizedForCountry(resource.data.get('countryId', resource.data.get('country', 'Libya')))) ||
+        hasCanonicalAreaAccess(resource.data.get('areaId', resource.data.get('area', resource.data.get('territory', ''))))
+      );
+
+      allow create: if isSignedIn() && (
+        isAdmin() || isSupervisor() || isManager()
+      ) && isValidPharmacy(incoming()) && incoming().get('outstandingBalance', 0) == 0;
+      allow update: if isSignedIn() && (
+        isAdmin() || isSupervisor() || isManager()
+      ) && isValidPharmacy(incoming()) &&
+        !incoming().diff(existing()).affectedKeys().hasAny(['outstandingBalance']);
+      
+      allow delete: if isAdmin();
+    }
+
+    // 3.4 PRODUCTS & PORTFOLIOS
+    match /products/{productId} {
+      allow read: if isSignedIn();
+
+      allow create: if isAdmin() &&
+        incoming().get('activeReservedQuantity', 0) == 0;
+
+      allow update: if isAdmin() &&
+        incoming().get('activeReservedQuantity', 0) ==
+          existing().get('activeReservedQuantity', 0);
+
+      allow delete: if isAdmin() &&
+        existing().get('activeReservedQuantity', 0) == 0;
+    }
+
+    // 3.5 DETAILED SLIDES & KEY MESSAGES
+    match /keyMessages/{msgId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin() || hasRole("Marketing") || hasRole("Product Manager");
+    }
+
+    // 3.6 ACADEMIC RESOURCES (PDFs, slide decks, multimedia, clinical studies)
+    match /academicResources/{resId} {
+      allow read: if isSignedIn();
+      allow create: if isResourceContentManager() &&
+                       isValidAcademicResource() &&
+                       (incoming().get('uploadedByUid', '') == request.auth.uid || isAdmin());
+      allow update: if isResourceContentManager() &&
+                       isValidAcademicResource() &&
+                       incoming().get('resourceId', '') == existing().get('resourceId', '') &&
+                       incoming().get('uploadedByUid', '') == existing().get('uploadedByUid', '') &&
+                       (incoming().get('updatedByUid', '') == request.auth.uid || isAdmin());
+      allow delete: if isResourceContentManager();
+    }
+
+    // 3.7 COMPLIANCE AUDIT LOGS (Append-only secure history ledger)
+    match /auditLogs/{logId} {
+      allow get: if isActiveUser() && (
+        isAdmin() ||
+        (resource.data.get('userId', '') == request.auth.uid) ||
+        (
+          isEnterpriseRole() && (
+            !resource.data.keys().hasAny(['countryId', 'country']) ||
+            isAuthorizedForCountry(resource.data.get('countryId', resource.data.get('country', '')))
+          )
+        )
+      );
+      allow list: if isActiveUser() && (
+        isAdmin() ||
+        (resource.data.get('userId', '') == request.auth.uid) ||
+        (
+          isEnterpriseRole() && (
+            !resource.data.keys().hasAny(['countryId', 'country']) ||
+            isAuthorizedForCountry(resource.data.get('countryId', resource.data.get('country', '')))
+          )
+        )
+      );
+      // Authoritative audit identity, ID, and timestamps are generated by the
+      // authenticated backend. Admin SDK writes bypass Rules; browser writes do not.
+      allow create, update: if false;
+      allow delete: if false; // Locked completely to prevent rewriting compliance history!
+    }
+
+    // 3.8 PHYSICIAN DETAILING VISITS
+    match /physicianVisits/{visitId} {
+      allow get, list: if isActiveUser() && (
+        resource.data.repId == request.auth.uid ||
+        isAdmin() ||
+        ((isSupervisor() || isManager()) && isSubordinateOfActor(resource.data.repId))
+      );
+      // Completion is an authenticated backend transaction because Rules
+      // cannot validate every nested Product/Key Message relationship.
+      allow create, update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // 3.9 PHARMACY DETAILING VISITS
+    match /pharmacyVisits/{visitId} {
+      allow get: if isSignedIn() && (resource.data.repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isRep() ||
+        (resource.data.repId == request.auth.uid)
+      );
+      // Completion and subsequent authoritative updates use the authenticated backend.
+      allow create, update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // 3.10 WEEKLY/MONTHLY MEDICAL PLANNER VISITS
+    match /medicalPlannerVisits/{visitId} {
+      allow get: if isSignedIn() && (resource.data.repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isRep() ||
+        (resource.data.repId == request.auth.uid)
+      );
+      // Scheduling is authoritative on the backend because calendar, market,
+      // frequency, Product and geography joins cannot be secured in Rules.
+      allow create, update: if false;
+      allow delete: if isAdmin() || isSupervisor() || isManager() || (isSignedIn() && existing().repId == request.auth.uid);
+    }
+
+    // 3.11 WEEKLY/MONTHLY MEDICAL PLANNER APPROVAL RECORD
+    match /medicalPlannerApprovals/{approvalId} {
+      allow get: if isSignedIn() && (resource.data.repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isRep() ||
+        (resource.data.repId == request.auth.uid)
+      );
+      allow create, update: if isSignedIn() && (incoming().repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // 3.12 WEEKLY/MONTHLY SALES PLANNER VISITS
+    match /salesPlannerVisits/{visitId} {
+      allow get: if isSignedIn() && (resource.data.repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isRep() ||
+        (resource.data.repId == request.auth.uid)
+      );
+      allow create: if isSignedIn() && (incoming().repId == request.auth.uid || isRep() || isAdmin()) && isValidPlannerVisit(incoming());
+      allow update: if isSignedIn() && (existing().repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin()) && isValidPlannerVisit(incoming());
+      allow delete: if isAdmin() || isSupervisor() || isManager() || (isSignedIn() && existing().repId == request.auth.uid);
+    }
+
+    // 3.13 WEEKLY/MONTHLY SALES PLANNER APPROVAL RECORD
+    match /salesPlannerApprovals/{approvalId} {
+      allow get: if isSignedIn() && (resource.data.repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isRep() ||
+        (resource.data.repId == request.auth.uid)
+      );
+      allow create, update: if isSignedIn() && (incoming().repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // 3.14 MONTHLY SAMPLE ALLOCATIONS (Quotas)
+    match /sampleAllocations/{allocId} {
+      allow get, list: if canAccessSampleRep(resource.data.get('repId', ''));
+      // Allocation and consumption are authoritative backend transactions.
+      allow create, update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // 3.15 EXTRA PORTFOLIO SAMPLE APPROVAL REQUESTS
+    match /sampleApprovals/{approvalId} {
+      allow get, list: if canAccessSampleRep(resource.data.get('repId', ''));
+      // Approval decisions are authoritative server mutations. The Admin SDK
+      // bypasses client Rules after the server validates actor, capability,
+      // canonical descendants, request state, quantity and audit identity.
+      allow create: if false;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 3.16 REPRESENTATIVE PORTFOLIO REPLENISHMENT REQUESTS
+    match /sampleRequests/{requestId} {
+      // List/query authorization deliberately uses canonical repId directly so
+      // Firestore can prove where("repId", "=="/"in", authorizedIds). Legacy
+      // requesterId fallback is retained only for document gets.
+      allow get: if canAccessSampleRep(canonicalRequestRep(resource.data));
+      allow list: if canAccessSampleRep(resource.data.get('repId', ''));
+      allow create: if false;
+      allow update: if isValidSelfSampleRequestCancellation(existing(), incoming()) ||
+        isValidManagedSampleRequestUpdate(existing(), incoming());
+      allow delete: if isAdmin();
+    }
+
+    // 3.17 CENTRAL WAREHOUSE STOCK ITEMS & TEMP CHAINS
+    match /sampleInventory/{whId} {
+      allow read: if isSampleInventoryOperator() || isSampleApprovalManager();
+      allow create: if false;
+      allow update: if canAdjustSampleStock() && incoming().get('sampleSkuId', '') == existing().get('sampleSkuId', '') && incoming().get('availableQuantity', 0) >= 0 && incoming().get('allocatedQuantity', 0) >= 0;
+      allow delete: if isAdmin();
+    }
+
+    // 3.18 SAMPLE CATALOG ENTRIES
+    match /sampleCatalog/{catalogId} {
+      allow read: if isSignedIn();
+      allow create, update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // 3.19 WAREHOUSE SAMPLE TRANSACTIONS LOG
+    match /sampleTransactions/{txId} {
+      allow read: if isSampleInventoryOperator() || isSampleApprovalManager();
+      allow create: if
+        (incoming().get('type', '') in ['ADJUSTMENT', 'EXPIRY', 'RETURN'] && canAdjustSampleStock());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 3.20 COLD-CHAIN SAMPLE BATCHES
+    match /sampleBatches/{batchId} {
+      allow read: if isSampleInventoryOperator() || isSampleApprovalManager();
+      allow create: if false;
+      allow update: if canAdjustSampleStock() && incoming().get('sampleSkuId', '') == existing().get('sampleSkuId', '') && incoming().get('batchNumber', '') == existing().get('batchNumber', '') && incoming().get('expiryDate', '') == existing().get('expiryDate', '') && incoming().get('availableQuantity', 0) >= 0;
+      allow delete: if isAdmin();
+    }
+
+    // 3.21 PHYSICIAN SAMPLE DISBURSED LEDGER RECORD
+    match /sampleDisbursedLogs/{disbursedId} {
+      allow get, list: if canAccessSampleRep(resource.data.get('repId', ''));
+      // Distribution is composed atomically by the authenticated backend. The
+      // Admin SDK does not use client Rules; no browser role may fabricate it.
+      allow create: if false;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Derived monthly physician usage. Distribution logs remain authoritative;
+    // this transaction-safe counter prevents concurrent cap overruns.
+    match /physicianSampleUsage/{usageId} {
+      allow get: if isSignedIn();
+      allow list: if isSampleApprovalManager() || isSampleInventoryOperator();
+      allow create, update: if false;
+      allow delete: if isAdmin();
+    }
+
+    match /physicianSampleRollingUsage/{usageId} {
+      allow read: if isSampleApprovalManager() || isSampleInventoryOperator();
+      allow create, update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // 3.22 MARKETING ACTIVE LAUNCH CAMPAIGNS
+    match /marketingCampaigns/{campId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() || hasRole("Marketing") || hasRole("Product Manager");
+      allow delete: if isAdmin();
+    }
+
+    // 3.23 MARKETING SCIENTIFIC CONFERENCES & WORKSHOPS
+    match /marketingActivities/{actId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() || hasRole("Marketing") || hasRole("Product Manager");
+      allow delete: if isAdmin();
+    }
+
+    // 3.24 MARKETING BROCHURES & ACCESSORIES REQUESTS
+    match /marketingMaterialRequests/{reqId} {
+      allow get: if isSignedIn() && (resource.data.repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isRep() ||
+        (resource.data.repId == request.auth.uid)
+      );
+      allow create: if isSignedIn() && (incoming().repId == request.auth.uid || isRep() || isAdmin());
+      allow update: if isSignedIn() && (existing().repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Canonical Visit Marketing Requests and their audit events are mutated
+    // only by authenticated backend services after hierarchy/scope validation.
+    match /visitMarketingRequests/{requestId} {
+      allow read, write: if false;
+    }
+
+    match /visitMarketingRequestAudit/{eventId} {
+      allow read, write: if false;
+    }
+
+    // 3.25 KOL CONFERENCE TRAVEL SPONSORSHIPS
+    match /kolSponsorships/{sponsId} {
+      allow get: if isSignedIn() && (resource.data.repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isRep() ||
+        (resource.data.repId == request.auth.uid)
+      );
+      allow create: if isSignedIn() && (incoming().repId == request.auth.uid || isRep() || isAdmin());
+      allow update: if isSignedIn() && (existing().repId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // 3.26 PHARMACY PURCHASE ORDERS (Commercial approval review)
+    match /orders/{orderId} {
+      // Operational reads and every lifecycle transition are served by the
+      // backend scope/transition services. Direct client access is limited to
+      // the owning representative and never authorizes a whole role globally.
+      allow get, list: if isActiveUser() && (
+        resource.data.get('salesRepUid', resource.data.get('createdByUid', resource.data.get('salesRep', ''))) == request.auth.uid
+      );
+      // Submitted commercial orders are created only by the authenticated
+      // backend after canonical visit, scope, product, market and workflow validation.
+      allow create: if false;
+      allow update: if isActiveUser() && isSalesRep() &&
+        existing().get('salesRepUid', existing().get('createdByUid', existing().get('salesRep', ''))) == request.auth.uid &&
+        incoming().get('salesRepUid', incoming().get('createdByUid', incoming().get('salesRep', ''))) == request.auth.uid &&
+        existing().get('status', '') == 'DRAFT' && incoming().get('status', '') == 'DRAFT' &&
+        isValidOrder(incoming()) &&
+        !incoming().diff(existing()).affectedKeys().hasAny(['paidStatus', 'paidAmount']);
+      allow delete: if isAdmin();
+    }
+
+    // 3.27 DATA IMPORT HISTORY TRACKING RECORDS
+    match /importHistory/{historyId} {
+      allow read: if isAdmin() || isSupervisor() || isManager();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 3.27.1 DIAGNOSTIC ONLY WRITES FOR ADMIN TESTING
+    match /testAdminWrites/{uid} {
+      allow create, update, delete: if isAdmin();
+      allow read: if isSignedIn();
+    }
+
+    // 3.28 CASING GEOGRAPHY & PRODUCT ALIGNMENTS
+    match /userTerritoryAssignments/{assignId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isRep() ||
+        (resource.data.userId == request.auth.uid)
+      );
+      allow create, update, delete: if isAdmin() || isSupervisor() || isManager();
+    }
+
+    match /userProductAssignments/{assignId} {
+      allow get: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid ||
+        isSubordinateOfActor(resource.data.userId)
+      );
+      
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid ||
+        isSubordinateOfActor(resource.data.userId)
+      );
+      
+      allow create: if isSignedIn() && (
+        isAdmin() || 
+        ((isSupervisor() || isManager()) && isSubordinateOfActor(incoming().userId))
+      ) &&
+      isValidId(assignId) &&
+      isValidUserProductAssignment(incoming()) &&
+      exists(/databases/$(database)/documents/users/$(incoming().userId)) &&
+      exists(/databases/$(database)/documents/products/$(incoming().productId)) &&
+      !incoming().productId.matches('.*\\s.*') &&
+      incoming().get('assignedBy', '') == request.auth.uid;
+      
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        ((isSupervisor() || isManager()) && isSubordinateOfActor(existing().userId))
+      ) &&
+      isValidUserProductAssignment(incoming()) &&
+      incoming().userId == existing().userId &&
+      incoming().productId == existing().productId &&
+      incoming().get('assignedBy', '') == existing().get('assignedBy', '') &&
+      incoming().get('assignedAt', '') == existing().get('assignedAt', '') &&
+      incoming().get('active', true) == (incoming().get('status', 'Active') == 'Active') &&
+      incoming().diff(existing()).affectedKeys().hasOnly([
+        'status', 'active', 'effectiveTo', 'updatedAt', 'updatedBy',
+        'deactivatedAt', 'deactivatedBy', 'deactivationReason',
+        'productSku', 'productNameSnapshot', 'productArabicNameSnapshot',
+        'productGroupNameSnapshot', 'therapeuticAreaNameSnapshot',
+        'assignmentType', 'schemaVersion'
+      ]);
+      
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    // 3.29 EXCEL/CSV TEMPLATE SCHEMAS REGISTRY
+    match /templates/{templateId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /templateHistory/{historyId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 3.30 ENTERPRISE NOTIFICATION & APPROVAL ALERTS
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || hasRole(resource.data.role) || isAdmin() || isManager() || isSupervisor() || isFinance() || isWarehouse() || isDelivery());
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isFinance() || isWarehouse() || isDelivery() ||
+        (resource.data.userId == request.auth.uid) || 
+        (resource.data.role != null && hasRole(resource.data.role))
+      );
+      allow create: if isSignedIn() && isValidNotification(incoming());
+      allow update: if isSignedIn() && (existing().userId == request.auth.uid || hasRole(existing().role) || isAdmin() || isManager() || isSupervisor() || isFinance() || isWarehouse() || isDelivery()) && isValidNotification(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 3.31 GEOGRAPHY MASTER REGISTER
+    match /countries/{countryId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /districts/{districtId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /cities/{cityId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /areas/{areaId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 3.32 TERRITORIES REGISTER
+    match /territories/{territoryId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && (isAdmin() || isManager() || isSupervisor());
+    }
+
+    // 3.33 ROLE PERMISSIONS CONFIGURATION
+    match /rolePermissions/{roleId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // WP77 canonical governance and market configuration. Navigation/settings
+    // records never grant access to operational data by themselves.
+    match /marketSettings/{marketId} {
+      allow read: if isSignedIn() && hasUserProfile();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /businessCalendarExceptions/{exceptionId} {
+      allow read: if isSignedIn() && hasUserProfile();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /accessGovernance/{roleId} {
+      allow read: if isSignedIn() && hasUserProfile();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /orderWorkflowTemplates/{templateId} {
+      allow read: if isSignedIn() && hasUserProfile();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /configurationAudit/{eventId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    match /attendanceSessions/{sessionId} {
+      allow get, list: if isSignedIn() && hasUserProfile() && (
+        resource.data.userId == request.auth.uid || isAdmin() ||
+        ((isSupervisor() || isManager()) && isSubordinateOfActor(resource.data.userId))
+      );
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        (existing().userId == request.auth.uid && incoming().userId == request.auth.uid) || isAdmin()
+      );
+      allow delete: if false;
+    }
+
+    match /leaveRequests/{leaveId} {
+      allow get, list: if isSignedIn() && hasUserProfile() && (
+        resource.data.userId == request.auth.uid || isAdmin() ||
+        ((isSupervisor() || isManager()) && isSubordinateOfActor(resource.data.userId))
+      );
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        isAdmin() || ((isSupervisor() || isManager()) && isSubordinateOfActor(existing().userId))
+      );
+      allow delete: if false;
+    }
+
+    // 3.34 PRODUCT GROUPS REGISTER
+    match /productGroups/{groupId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 3.35 PRODUCT PROMOTION GROUPS REGISTER
+    match /productPromotionGroups/{groupId} {
+      allow read: if isSignedIn() && hasUserProfile();
+      allow create, update: if (isAdmin() || hasRole("Product Manager") || hasRole("Marketing Manager")) && isValidProductPromotionGroup(incoming()) && isValidId(groupId);
+      allow delete: if isAdmin() && isValidId(groupId);
+    }
+
+    // 3.36 PHYSICIAN SPECIALTIES REGISTER
+    match /physicianSpecialties/{specialtyId} {
+      allow read: if isSignedIn() && hasUserProfile();
+      allow create, update: if (isAdmin() || hasRole("Medical Manager") || hasRole("Product Manager") || hasRole("Marketing Manager")) && isValidPhysicianSpecialty(incoming()) && isValidId(specialtyId);
+      allow delete: if isAdmin() && isValidId(specialtyId);
+    }
+
+    // =========================================================================
+    // 3.37 PRODUCT SALES TARGET MODULE (WP4.1H.2 Security Certification)
+    // Direct client-side writes are strictly forbidden to ensure only backend endpoints write targets.
+    // Representatives cannot read raw target configs. They can only read scoped calculated targets.
+    // =========================================================================
+    match /productTargetPlans/{planId} {
+      allow read: if isEnterpriseRole() && isAuthorizedForCountry(resource.data.countryId);
+      allow write: if false;
+    }
+
+    match /productAnnualTargets/{targetId} {
+      allow read: if isEnterpriseRole() && isAuthorizedForCountry(resource.data.countryId);
+      allow write: if false;
+    }
+
+    match /productAreaPotentials/{potentialId} {
+      allow read: if isEnterpriseRole() && isAuthorizedForCountry(resource.data.countryId);
+      allow write: if false;
+    }
+
+    match /productQuarterlyDistributions/{distId} {
+      allow read: if isEnterpriseRole() && isAuthorizedForCountry(resource.data.countryId);
+      allow write: if false;
+    }
+
+    match /calculatedProductTargets/{targetId} {
+      allow read: if isActiveUser() && (
+        (isSalesRep() && isAuthorizedForCountry(resource.data.countryId) && resource.data.areaId in getUserData().get('areaIds', [])) ||
+        (isEnterpriseRole() && isAuthorizedForCountry(resource.data.countryId))
+      );
+      allow write: if false;
+    }
+
+    match /targetCalculationRuns/{runId} {
+      allow read: if isEnterpriseRole() && isAuthorizedForCountry(resource.data.countryId);
+      allow write: if false;
+    }
+
+    match /targetImports/{importId} {
+      allow read: if isEnterpriseRole() && isAuthorizedForCountry(resource.data.countryId);
+      allow write: if false;
+    }
+    // 3.38 CONNECTIVITY PROBE REGISTER (WP5.1A Security Certification)
+    // Representatives are granted read-only access to this specific probe record, while general administrative settings are denied.
+    match /systemStatus/connectivityProbe {
+      allow get: if isSignedIn();
+      allow list: if false; // Deny general list/query traversal of status documents
+      allow write: if isAdmin();
+    }
+
+    // 3.39 BUSINESS DOCUMENT SEQUENCES (Document numbering counters)
+    match /businessDocumentSequences/{counterId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 3.40 UNFULFILLED DEMAND / STOCK REQUESTS
+    match /stockRequests/{requestId} {
+      allow get: if isSignedIn() && (
+        resource.data.representativeUid == request.auth.uid ||
+        resource.data.createdBy == request.auth.uid ||
+        isRep() || isSupervisor() || isManager() || isWarehouse() || isFinance() || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isWarehouse() || isFinance() || isRep() ||
+        (resource.data.representativeUid == request.auth.uid) ||
+        (resource.data.createdBy == request.auth.uid)
+      );
+      allow create: if isSignedIn() && (
+        incoming().get('representativeUid', '') == request.auth.uid ||
+        incoming().get('createdBy', '') == request.auth.uid ||
+        isRep() || isAdmin()
+      );
+      allow update: if isSignedIn() && (
+        existing().get('representativeUid', '') == request.auth.uid ||
+        existing().get('createdBy', '') == request.auth.uid ||
+        isRep() || isSupervisor() || isManager() || isWarehouse() || isFinance() || isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 3.41 PHARMACY VISIT PAYMENTS & COLLECTIONS
+    match /payments/{paymentId} {
+      allow get: if isSignedIn() && (
+        resource.data.createdBy == request.auth.uid ||
+        isRep() || isSupervisor() || isManager() || isFinance() || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isFinance() || isRep() ||
+        (resource.data.createdBy == request.auth.uid)
+      );
+      allow create, update, delete: if false;
+    }
+
+    // 3.42 PHARMACY VISIT DRAFTS
+    match /pharmacyVisitDrafts/{draftId} {
+      allow get: if isSignedIn() && (
+        resource.data.repUid == request.auth.uid ||
+        isSupervisor() || isManager() || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() ||
+        resource.data.repUid == request.auth.uid
+      );
+      allow create: if isSignedIn() && (
+        incoming().get('repUid', '') == request.auth.uid || isRep() || isAdmin()
+      );
+      allow update: if isSignedIn() && (
+        existing().get('repUid', '') == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin()
+      );
+      allow delete: if isSignedIn() && (
+        existing().get('repUid', '') == request.auth.uid || isRep() || isAdmin()
+      );
+    }
+
+    // 3.43 CUSTOMER FINANCIAL PROFILES (WP-AR-1.0)
+    match /customerFinancialProfiles/{customerId} {
+      allow read: if isSignedIn() && (
+        isAdmin() || isFinance() || isManager() || isSupervisor() || isRep()
+      );
+      allow create, update, delete: if false;
+    }
+
+    // 3.44 CUSTOMER LEDGER ENTRIES (WP-AR-1.0)
+    match /customerLedgerEntries/{entryId} {
+      allow read: if isSignedIn() && (
+        isAdmin() || isFinance() || isManager() || isSupervisor() || isRep()
+      );
+      allow create, update, delete: if false;
+    }
+
+    // 3.45 PAYMENT COLLECTIONS (WP-FI-2.0)
+    match /paymentCollections/{paymentId} {
+      allow read: if isSignedIn() && (
+        isAdmin() || isFinance() || isManager() || isSupervisor() || isRep()
+      );
+      allow create, update, delete: if false;
+    }
+
+    // 3.46 DETAILING MATERIAL USAGE TRACKING (WP-DA1)
+    match /detailingMaterialUsage/{usageId} {
+      allow get: if isSignedIn() && (resource.data.representativeUid == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin());
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isRep() ||
+        (resource.data.representativeUid == request.auth.uid)
+      );
+      allow create: if isSignedIn() &&
+        incoming().representativeUid == request.auth.uid &&
+        (isRep() || isAdmin() || isSupervisor() || isManager()) &&
+        isValidDetailingMaterialUsage(incoming());
+      allow update: if isSignedIn() &&
+        existing().representativeUid == request.auth.uid &&
+        incoming().representativeUid == existing().representativeUid &&
+        (isRep() || isAdmin() || isSupervisor() || isManager()) &&
+        isValidDetailingMaterialUsage(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // 3.47 DETAILING PAGE ANALYTICS (WP-DA2)
+    match /detailingPageAnalytics/{pageAnalyticsId} {
+      allow get: if isSignedIn() && (
+        resource.data.representativeUid == request.auth.uid || isRep() || isSupervisor() || isManager() || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() || isManager() || isSupervisor() || isRep() ||
+        (resource.data.representativeUid == request.auth.uid)
+      );
+      allow create: if isSignedIn() &&
+        incoming().representativeUid == request.auth.uid &&
+        (isRep() || isAdmin() || isSupervisor() || isManager()) &&
+        isValidDetailingPageAnalytics(incoming());
+      allow update: if isSignedIn() &&
+        existing().representativeUid == request.auth.uid &&
+        incoming().representativeUid == existing().representativeUid &&
+        incoming().usageSessionId == existing().usageSessionId &&
+        incoming().visitId == existing().visitId &&
+        incoming().physicianId == existing().physicianId &&
+        incoming().productId == existing().productId &&
+        incoming().materialId == existing().materialId &&
+        incoming().pageNumber == existing().pageNumber &&
+        incoming().pageVisitIndex == existing().pageVisitIndex &&
+        incoming().enteredAt == existing().enteredAt &&
+        (isRep() || isAdmin() || isSupervisor() || isManager()) &&
+        isValidDetailingPageAnalytics(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // 3.48 DETAILING HOTSPOT DEFINITIONS (WP-DA3A)
+    match /detailingHotspotDefinitions/{hotspotId} {
+      allow get: if isSignedIn() && (resource == null || resource.data.active == true || isHotspotContentManager());
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+        isHotspotContentManager() &&
+        incoming().createdByUid == request.auth.uid &&
+        incoming().updatedByUid == request.auth.uid &&
+        incoming().version == 1 &&
+        isValidDetailingHotspotDefinition(incoming());
+      allow update: if isSignedIn() &&
+        isHotspotContentManager() &&
+        incoming().hotspotId == existing().hotspotId &&
+        incoming().materialId == existing().materialId &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedByUid == request.auth.uid &&
+        incoming().version == existing().version + 1 &&
+        isValidDetailingHotspotDefinition(incoming());
+      allow delete: if false;
+    }
+  }
+}

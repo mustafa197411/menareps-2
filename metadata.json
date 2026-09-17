@@ -1,0 +1,10 @@
+{
+  "name": "August 4 new version ",
+  "description": "Enterprise Pharmaceutical CRM with Arabic/English localization, GPS verification, and embedded AI insights for MENA medical representatives.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

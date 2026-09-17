@@ -1,0 +1,121 @@
+# Version control, dependencies, generated output, and local caches
+.git/
+.gitignore
+.gcloudignore
+node_modules/
+dist/
+coverage/
+.npm/
+.firebase/
+
+# Screenshots and local certification artifacts
+artifacts/
+
+# Environment, credentials, keys, and local overrides
+.env
+.env.*
+*.env
+*.pem
+*.key
+service-account*.json
+.firebaserc
+firebase.uat.json
+
+# Logs, emulator output, diagnostics, and temporary files
+*.log
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+*.tmp
+rules_test_output.txt
+products-inspection.txt
+src/diagnostics-output.txt
+src/uat-physician-visit-output.txt
+
+# Backups, snapshots, and rollback material
+*.backup
+*.bak
+*_backup*
+wp52f_rollback_snapshot.json
+ROLLBACK_*.md
+
+# Test and emulator-only sources/configuration
+tests/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/*.emulator.ts
+vitest.config.ts
+vitest.uat.config.ts
+playwright.uat.config.ts
+
+# Firebase deployment resources are not part of a Cloud Run source deploy
+firebase.json
+firebase-blueprint.json
+firestore.rules
+firestore.indexes.json
+storage.rules
+
+# Separate Firebase Functions package and non-runtime project records
+functions/
+reports/
+certification/
+ops/
+docs/
+metadata.json
+
+# Local inspection, repair, audit, migration, and certification utilities
+inspect_*.ts
+inspect_*.cjs
+query_*.ts
+repair_*.ts
+check_*.cjs
+check_*.mjs
+audit_*.ts
+audit_*.mjs
+test_*.ts
+test_*.mjs
+verify_*.ts
+verify_*.mjs
+purge_*.ts
+run_*.ts
+src/inspect*.ts
+src/check_*.ts
+src/read-*.ts
+src/register-*.ts
+src/update-*.ts
+src/print-*.ts
+src/calculate_*.ts
+src/execute_*.ts
+src/normalize_*.ts
+src/perform_*.ts
+src/get_cert_details.ts
+src/verify_*.ts
+src/run_*.ts
+src/*RulesCertification.ts
+
+# Standalone local diagnostics not imported by the production entrypoints
+server/test-admin-sdk.ts
+server/test-ai-security.ts
+src/test-query.ts
+src/db-inspector.ts
+src/db-inspector-authenticated.ts
+src/find_finance_users.ts
+src/auditDuplicatePair.ts
+
+# Standalone validation CLI and repository-only guidance
+server/productionReadinessCli.ts
+# Local production-configuration utility not imported by runtime entrypoints
+server/offersRegistryConfigurationCli.ts
+# Repository-only audit documentation not required by runtime
+src/components/analytics/ENTERPRISE_ANALYTICS_AUDIT.md
+AGENTS.md
+README.md
+
+# Project-only reports and obsolete configuration copies
+UAT_Report.md
+security_spec.md
+HIERARCHY_RULE_QUERY_SHAPES.md
+firebase-applet-config.json.backup
+firestore.rules.wp1.5a.backup

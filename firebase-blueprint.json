@@ -1,0 +1,776 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role, region, and status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "region": { "type": "string" },
+        "territory": { "type": "string" },
+        "active": { "type": "boolean" },
+        "joinedDate": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "UserActivationProfile": {
+      "title": "User Activation Profile",
+      "description": "Pre-created profile for deterministic user activation",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "role": { "type": "string" },
+        "active": { "type": "boolean" },
+        "used": { "type": "boolean" },
+        "createdForActivation": { "type": "boolean" }
+      },
+      "required": ["email", "name", "role"]
+    },
+    "Physician": {
+      "title": "Physician",
+      "description": "Physician profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "specialty": { "type": "string" },
+        "class": { "type": "string" },
+        "frequency": { "type": "number" },
+        "region": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" }
+      },
+      "required": ["id", "name"]
+    },
+    "Pharmacy": {
+      "title": "Pharmacy",
+      "description": "Pharmacy profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "class": { "type": "string" },
+        "frequency": { "type": "number" },
+        "region": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" }
+      },
+      "required": ["id", "name"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Product profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "therapeuticArea": { "type": "string" },
+        "price": { "type": "number" }
+      },
+      "required": ["id", "name"]
+    },
+    "KeyMessage": {
+      "title": "Key Message",
+      "description": "Key message for detailings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "brandId": { "type": "string" },
+        "brandName": { "type": "string" },
+        "message": { "type": "string" },
+        "messageAr": { "type": "string" },
+        "therapeuticArea": { "type": "string" },
+        "productSku": { "type": "string" },
+        "keyFocus": { "type": "string" },
+        "detailingSequence": { "type": "number" },
+        "physicianSpecialty": { "type": "string" },
+        "resourceId": { "type": "string" },
+        "campaignId": { "type": "string" },
+        "isApproved": { "type": "boolean" }
+      },
+      "required": ["id", "message"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "Audit log details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "action": { "type": "string" },
+        "entityName": { "type": "string" },
+        "details": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "userId", "action"]
+    },
+    "PhysicianVisit": {
+      "title": "Physician Visit",
+      "description": "Detailing visit of a physician",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "physicianId": { "type": "string" },
+        "physicianName": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "physicianId", "physicianName", "date"]
+    },
+    "PharmacyVisit": {
+      "title": "Pharmacy Visit",
+      "description": "Detailing visit of a pharmacy",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pharmacyId": { "type": "string" },
+        "pharmacyName": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "pharmacyId", "pharmacyName", "date"]
+    },
+    "ImportHistory": {
+      "title": "Import History",
+      "description": "History of excel/csv imports",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fileName": { "type": "string" },
+        "recordCount": { "type": "number" }
+      },
+      "required": ["id", "fileName", "recordCount"]
+    },
+    "MedicalPlannerVisit": {
+      "title": "Medical Planner Visit",
+      "description": "Planned medical representative visit",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "physicianId": { "type": "string" },
+        "physicianName": { "type": "string" },
+        "specialty": { "type": "string" },
+        "day": { "type": "string" },
+        "time": { "type": "string" },
+        "date": { "type": "string" },
+        "month": { "type": "string" },
+        "repId": { "type": "string" },
+        "repName": { "type": "string" },
+        "planningType": { "type": "string" },
+        "isUnplanned": { "type": "boolean" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "physicianId", "physicianName", "repId"]
+    },
+    "MedicalPlannerApproval": {
+      "title": "Medical Planner Approval",
+      "description": "Approval status tracking for a weekly/monthly plan period",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "repId": { "type": "string" },
+        "repName": { "type": "string" },
+        "period": { "type": "string" },
+        "planningType": { "type": "string" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["id", "repId", "period", "status"]
+    },
+    "SalesPlannerVisit": {
+      "title": "Sales Planner Visit",
+      "description": "Planned pharmacy representative visit for sales",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pharmacyId": { "type": "string" },
+        "pharmacyName": { "type": "string" },
+        "territory": { "type": "string" },
+        "day": { "type": "string" },
+        "time": { "type": "string" },
+        "date": { "type": "string" },
+        "month": { "type": "string" },
+        "week": { "type": "string" },
+        "repId": { "type": "string" },
+        "repName": { "type": "string" },
+        "planningType": { "type": "string" },
+        "isUnplanned": { "type": "boolean" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "pharmacyId", "pharmacyName", "repId"]
+    },
+    "SalesPlannerApproval": {
+      "title": "Sales Planner Approval",
+      "description": "Approval status tracking for sales weekly/monthly plan period",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "repId": { "type": "string" },
+        "repName": { "type": "string" },
+        "period": { "type": "string" },
+        "planningType": { "type": "string" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["id", "repId", "period", "status"]
+    },
+    "SampleAllocation": {
+      "title": "Sample Allocation",
+      "description": "Monthly sample allocation quota for medical representatives",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "repId": { "type": "string" },
+        "repName": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "brand": { "type": "string" },
+        "allocatedQuantity": { "type": "number" },
+        "distributedQuantity": { "type": "number" },
+        "remainingQuantity": { "type": "number" },
+        "month": { "type": "string" },
+        "region": { "type": "string" }
+      },
+      "required": ["id", "repId", "productId", "allocatedQuantity", "month"]
+    },
+    "SampleApproval": {
+      "title": "Sample Approval",
+      "description": "Request for extra sample allocations awaiting approval",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "repId": { "type": "string" },
+        "repName": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "brand": { "type": "string" },
+        "requestedQuantity": { "type": "number" },
+        "originalAllocation": { "type": "number" },
+        "reason": { "type": "string" },
+        "status": { "type": "string" },
+        "submittedDate": { "type": "string" },
+        "actionBy": { "type": "string" },
+        "actionDate": { "type": "string" }
+      },
+      "required": ["id", "repId", "productId", "requestedQuantity", "status"]
+    },
+    "SampleRequest": {
+      "title": "Sample Request",
+      "description": "Representative request to replenish field samples",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "repId": { "type": "string" },
+        "repName": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "brand": { "type": "string" },
+        "quantity": { "type": "number" },
+        "reason": { "type": "string" },
+        "status": { "type": "string" },
+        "requestedDate": { "type": "string" },
+        "urgent": { "type": "boolean" },
+        "physicianId": { "type": "string" },
+        "physicianName": { "type": "string" }
+      },
+      "required": ["id", "repId", "productId", "quantity", "status"]
+    },
+    "SampleInventoryItem": {
+      "title": "Sample Inventory Item",
+      "description": "Sample stock item in the central warehouse",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sampleId": { "type": "string" },
+        "name": { "type": "string" },
+        "brand": { "type": "string" },
+        "unitSize": { "type": "string" },
+        "unitsPerPack": { "type": "number" },
+        "coldChain": { "type": "boolean" },
+        "status": { "type": "string" },
+        "qty": { "type": "number" },
+        "available": { "type": "number" },
+        "repsStock": { "type": "number" },
+        "reorder": { "type": "number" }
+      },
+      "required": ["id", "name"]
+    },
+    "SampleTransaction": {
+      "title": "Sample Transaction",
+      "description": "Log of sample transactions (allocations, distributions, receipts, returns)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "datetime": { "type": "string" },
+        "type": { "type": "string" },
+        "product": { "type": "string" },
+        "qty": { "type": "number" },
+        "change": { "type": "string" },
+        "source": { "type": "string" },
+        "reason": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "datetime", "type", "product", "qty"]
+    },
+    "MarketingCampaign": {
+      "title": "Marketing Campaign",
+      "description": "Corporate marketing launch and awareness campaign",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nameAr": { "type": "string" },
+        "brand": { "type": "string" },
+        "therapeuticArea": { "type": "string" },
+        "therapeuticAreaAr": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "status": { "type": "string" },
+        "targetPhysicians": { "type": "number" },
+        "completedPhysicians": { "type": "number" },
+        "materialsCount": { "type": "number" },
+        "digitalMessageTheme": { "type": "string" },
+        "digitalMessageThemeAr": { "type": "string" }
+      },
+      "required": ["id", "name", "brand"]
+    },
+    "MarketingActivity": {
+      "title": "Marketing Activity",
+      "description": "Scientific conferences, clinical roundtables, and awareness seminars",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nameAr": { "type": "string" },
+        "type": { "type": "string" },
+        "typeAr": { "type": "string" },
+        "brand": { "type": "string" },
+        "date": { "type": "string" },
+        "location": { "type": "string" },
+        "locationAr": { "type": "string" },
+        "expectedDoctors": { "type": "number" },
+        "budget": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "name", "brand", "date"]
+    },
+    "MarketingMaterialRequest": {
+      "title": "Marketing Material Request",
+      "description": "Representative requests for brochures, accessories, and anatomical guides",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "materialName": { "type": "string" },
+        "materialNameAr": { "type": "string" },
+        "category": { "type": "string" },
+        "categoryAr": { "type": "string" },
+        "quantity": { "type": "number" },
+        "requestedDate": { "type": "string" },
+        "status": { "type": "string" },
+        "purpose": { "type": "string" },
+        "purposeAr": { "type": "string" }
+      },
+      "required": ["id", "materialName", "quantity", "status"]
+    },
+    "KOLSponsorship": {
+      "title": "KOL Sponsorship",
+      "description": "Doctor conference registries, travel and medical honorarium sponsorships",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "doctorName": { "type": "string" },
+        "doctorNameAr": { "type": "string" },
+        "specialty": { "type": "string" },
+        "specialtyAr": { "type": "string" },
+        "eventTitle": { "type": "string" },
+        "eventTitleAr": { "type": "string" },
+        "sponsorshipType": { "type": "string" },
+        "sponsorshipTypeAr": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string" },
+        "dateFiled": { "type": "string" }
+      },
+      "required": ["id", "doctorName", "eventTitle", "amount", "status"]
+    },
+    "AcademicResource": {
+      "title": "Academic Resource",
+      "description": "PDF studies, clinical guides, and interactive detailing slide kits",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "category": { "type": "string" },
+        "size": { "type": "string" },
+        "type": { "type": "string" },
+        "lastUpdated": { "type": "string" },
+        "brand": { "type": "string" },
+        "product": { "type": "string" },
+        "therapeuticArea": { "type": "string" },
+        "specialty": { "type": "string" },
+        "language": { "type": "string" },
+        "version": { "type": "string" },
+        "effectiveDate": { "type": "string" },
+        "expiryDate": { "type": "string" }
+      },
+      "required": ["id", "title", "category", "brand"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Pharmacy commercial order request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pharmacyId": { "type": "string" },
+        "pharmacyName": { "type": "string" },
+        "pharmacyAddress": { "type": "string" },
+        "date": { "type": "string" },
+        "total": { "type": "number" },
+        "paidStatus": { "type": "string" },
+        "paidAmount": { "type": "number" },
+        "status": { "type": "string" },
+        "salesRep": { "type": "string" },
+        "items": { "type": "array" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "pharmacyId", "pharmacyName", "total", "status", "salesRep"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Enterprise notification or approval alert",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "notificationId": { "type": "string" },
+        "userId": { "type": "string" },
+        "role": { "type": "string" },
+        "category": { "type": "string" },
+        "priority": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "relatedModule": { "type": "string" },
+        "relatedRecordId": { "type": "string" },
+        "deepLink": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "expiresAt": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "auditLogId": { "type": "string" }
+      },
+      "required": ["id", "notificationId", "title", "message", "status", "createdAt"]
+    },
+    "Country": {
+      "title": "Country",
+      "description": "Country level geography",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "District": {
+      "title": "District",
+      "description": "District level geography",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "countryId": { "type": "string" },
+        "countryName": { "type": "string" }
+      },
+      "required": ["id", "name", "countryId", "countryName"]
+    },
+    "City": {
+      "title": "City",
+      "description": "City level geography",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "districtId": { "type": "string" },
+        "districtName": { "type": "string" },
+        "countryId": { "type": "string" },
+        "countryName": { "type": "string" }
+      },
+      "required": ["id", "name", "districtId", "districtName", "countryId", "countryName"]
+    },
+    "Area": {
+      "title": "Area",
+      "description": "Area or Territory level geography",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "cityId": { "type": "string" },
+        "cityName": { "type": "string" },
+        "districtId": { "type": "string" },
+        "districtName": { "type": "string" },
+        "countryId": { "type": "string" },
+        "countryName": { "type": "string" }
+      },
+      "required": ["id", "name", "cityId", "cityName", "districtId", "districtName", "countryId", "countryName"]
+    },
+    "ProductPromotionGroup": {
+      "title": "Product Promotion Group",
+      "description": "Product promotion group (e.g. brand groups) for campaign detailing and filters",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "normalizedName": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "aliases": { "type": "array" }
+      },
+      "required": ["id", "name", "normalizedName"]
+    },
+    "DetailingMaterialUsage": {
+      "title": "Detailing Material Usage",
+      "description": "Tracking document for detailing material viewing sessions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "visitId": { "type": "string" },
+        "physicianId": { "type": "string" },
+        "representativeUid": { "type": "string" },
+        "productId": { "type": "string" },
+        "materialId": { "type": "string" },
+        "materialName": { "type": "string" },
+        "openedAt": { "type": "string" },
+        "closedAt": { "type": "string" },
+        "durationSeconds": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["visitId", "physicianId", "representativeUid", "productId", "materialId", "status"]
+    },
+    "DetailingPageAnalytics": {
+      "title": "Detailing Page Analytics",
+      "description": "Page-level viewing session analytics for detailing materials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "usageSessionId": { "type": "string" },
+        "visitId": { "type": "string" },
+        "physicianId": { "type": "string" },
+        "representativeUid": { "type": "string" },
+        "productId": { "type": "string" },
+        "promotionGroupId": { "type": "string" },
+        "materialId": { "type": "string" },
+        "pageNumber": { "type": "number" },
+        "pageVisitIndex": { "type": "number" },
+        "enteredAt": { "type": "string" },
+        "exitedAt": { "type": "string" },
+        "durationSeconds": { "type": "number" },
+        "exitReason": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["usageSessionId", "visitId", "physicianId", "representativeUid", "productId", "materialId", "pageNumber", "pageVisitIndex"]
+    },
+    "DetailingHotspotDefinition": {
+      "title": "Detailing Hotspot Definition",
+      "description": "Configurable interactive rectangular hotspot regions on detailing material pages",
+      "type": "object",
+      "properties": {
+        "hotspotId": { "type": "string" },
+        "materialId": { "type": "string" },
+        "materialName": { "type": "string" },
+        "productId": { "type": "string" },
+        "promotionGroupId": { "type": "string" },
+        "resourceVersion": { "type": "number" },
+        "pageNumber": { "type": "number" },
+        "hotspotName": { "type": "string" },
+        "hotspotType": { "type": "string" },
+        "xPercent": { "type": "number" },
+        "yPercent": { "type": "number" },
+        "widthPercent": { "type": "number" },
+        "heightPercent": { "type": "number" },
+        "linkedKeyMessageId": { "type": "string" },
+        "linkedClaimId": { "type": "string" },
+        "linkedProductId": { "type": "string" },
+        "description": { "type": "string" },
+        "active": { "type": "boolean" },
+        "version": { "type": "number" },
+        "createdByUid": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedByUid": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["hotspotId", "materialId", "productId", "promotionGroupId", "resourceVersion", "pageNumber", "hotspotName", "hotspotType", "xPercent", "yPercent", "widthPercent", "heightPercent", "active", "version", "createdByUid", "updatedByUid"]
+    },
+    "DetailingHotspotInteraction": {
+      "title": "Detailing Hotspot Interaction",
+      "description": "Trusted immutable physician-visit hotspot activation event",
+      "type": "object",
+      "properties": {
+        "interactionId": { "type": "string" }, "hotspotId": { "type": "string" }, "hotspotVersion": { "type": "number" },
+        "resourceId": { "type": "string" }, "resourceVersion": { "type": "number" }, "productId": { "type": "string" },
+        "promotionGroupId": { "type": "string" }, "keyMessageId": { "type": "string" }, "pageNumber": { "type": "number" },
+        "usageSessionId": { "type": "string" }, "visitContextId": { "type": "string" }, "visitId": { "type": "string" },
+        "physicianId": { "type": "string" }, "physicianSpecialtyId": { "type": "string" }, "representativeUid": { "type": "string" },
+        "interactionType": { "type": "string" }, "interactedAt": { "type": "string" }, "createdAt": { "type": "string" }
+      },
+      "required": ["interactionId", "hotspotId", "hotspotVersion", "resourceId", "resourceVersion", "productId", "promotionGroupId", "pageNumber", "visitContextId", "visitId", "physicianId", "physicianSpecialtyId", "representativeUid", "interactionType", "interactedAt", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "User",
+      "description": "App users and core team members"
+    },
+    "userActivationProfiles": {
+      "schema": "UserActivationProfile",
+      "description": "Deterministic user activation profiles"
+    },
+    "physicians": {
+      "schema": "Physician",
+      "description": "Physicians registered in territory"
+    },
+    "pharmacies": {
+      "schema": "Pharmacy",
+      "description": "Pharmacies registered in territory"
+    },
+    "products": {
+      "schema": "Product",
+      "description": "Medicines and health products portfolio"
+    },
+    "keyMessages": {
+      "schema": "KeyMessage",
+      "description": "Commercial detailing slides and details"
+    },
+    "auditLogs": {
+      "schema": "AuditLog",
+      "description": "Security logs"
+    },
+    "physicianVisits": {
+      "schema": "PhysicianVisit",
+      "description": "Physician visit reports"
+    },
+    "pharmacyVisits": {
+      "schema": "PharmacyVisit",
+      "description": "Pharmacy visit reports"
+    },
+    "importHistory": {
+      "schema": "ImportHistory",
+      "description": "Imports tracking log"
+    },
+    "medicalPlannerVisits": {
+      "schema": "MedicalPlannerVisit",
+      "description": "Planned and unplanned medical visits tracking"
+    },
+    "medicalPlannerApprovals": {
+      "schema": "MedicalPlannerApproval",
+      "description": "Weekly and monthly representative planning approvals"
+    },
+    "salesPlannerVisits": {
+      "schema": "SalesPlannerVisit",
+      "description": "Planned and unplanned sales representative visits tracking"
+    },
+    "salesPlannerApprovals": {
+      "schema": "SalesPlannerApproval",
+      "description": "Weekly and monthly sales representative planning approvals"
+    },
+    "sampleAllocations": {
+      "schema": "SampleAllocation",
+      "description": "Monthly quotas and allocations of pharmaceutical samples for reps"
+    },
+    "sampleApprovals": {
+      "schema": "SampleApproval",
+      "description": "Quota requests and approvals for medical representative portfolios"
+    },
+    "sampleRequests": {
+      "schema": "SampleRequest",
+      "description": "Replenishment and logistical requests for samples"
+    },
+    "sampleInventory": {
+      "schema": "SampleInventoryItem",
+      "description": "Central warehouse sample stock items and cold chains"
+    },
+    "sampleTransactions": {
+      "schema": "SampleTransaction",
+      "description": "Comprehensive sample log history for compliance"
+    },
+    "marketingCampaigns": {
+      "schema": "MarketingCampaign",
+      "description": "Active clinical launch campaigns and themes"
+    },
+    "marketingActivities": {
+      "schema": "MarketingActivity",
+      "description": "Roundtables, symposia, and awareness workshops"
+    },
+    "marketingMaterialRequests": {
+      "schema": "MarketingMaterialRequest",
+      "description": "Representative requests for brochures and desk aids"
+    },
+    "kolSponsorships": {
+      "schema": "KOLSponsorship",
+      "description": "Doctor congress registries, travel, and speakers honoraria"
+    },
+    "academicResources": {
+      "schema": "AcademicResource",
+      "description": "PDF brochures, scientific studies, and digital slide decks"
+    },
+    "orders": {
+      "schema": "Order",
+      "description": "Pharmacy purchase and commercial orders"
+    },
+    "notifications": {
+      "schema": "Notification",
+      "description": "Enterprise notification and approval engine alerts"
+    },
+    "countries": {
+      "schema": "Country",
+      "description": "Geography Countries Master Register"
+    },
+    "districts": {
+      "schema": "District",
+      "description": "Geography Districts Master Register"
+    },
+    "cities": {
+      "schema": "City",
+      "description": "Geography Cities Master Register"
+    },
+    "areas": {
+      "schema": "Area",
+      "description": "Geography Areas and Territories Master Register"
+    },
+    "productPromotionGroups": {
+      "schema": "ProductPromotionGroup",
+      "description": "Product Promotion Groups Master Register"
+    },
+    "paymentCollections": {
+      "schema": "PaymentCollection",
+      "description": "Enterprise payment collections and financial intelligence records"
+    },
+    "detailingMaterialUsage": {
+      "schema": "DetailingMaterialUsage",
+      "description": "Tracking documents for detailing material viewing sessions"
+    },
+    "detailingPageAnalytics": {
+      "schema": "DetailingPageAnalytics",
+      "description": "Automatic page-level session analytics tracking for detailing materials"
+    },
+    "detailingHotspotDefinitions": {
+      "schema": "DetailingHotspotDefinition",
+      "description": "Master configuration registry for brochure page hotspots"
+    },
+    "detailingHotspotInteractions": {
+      "schema": "DetailingHotspotInteraction",
+      "description": "Trusted immutable hotspot interaction events"
+    }
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "timestamp": "2026-07-22T22:27:15.717Z",
+  "authUid": "cQt7jjLOaHPgBmGCWzdjZm3pojo2",
+  "pendingId": "cyN52057EFCnWV2RukuN",
+  "opDataBefore": {
+    "assignmentSyncExpectedOperations": 2,
+    "updatedBy": "cQt7jjLOaHPgBmGCWzdjZm3pojo2",
+    "active": true,
+    "assignmentSyncRunId": "sync_1784757916554",
+    "assignedProductIds": [
+      "PROD-2609"
+    ],
+    "createdAt": "2026-07-22 22:05:54 UTC",
+    "hasAuthenticated": true,
+    "territories": [
+      "TAJOURA"
+    ],
+    "authLinked": true,
+    "managerId": "BlROcJqcCpkFeXSYNVLQ",
+    "createdBy": "cQt7jjLOaHPgBmGCWzdjZm3pojo2",
+    "name": "test-user1",
+    "assignmentSyncStatus": "COMPLETE",
+    "companyId": "MENAREPS-CENTRAL",
+    "territory": "TAJOURA",
+    "products": [
+      "PROD-2609"
+    ],
+    "status": "Active",
+    "lastName": "",
+    "uid": "cQt7jjLOaHPgBmGCWzdjZm3pojo2",
+    "areaNames": [
+      "TAJOURA"
+    ],
+    "region": "West",
+    "employmentStatus": "Active",
+    "managerEmail": "slaestajura@esnad.local",
+    "assignmentSyncCompletedOperations": 2,
+    "targetPromotionGroupIds": [
+      "acne"
+    ],
+    "updatedAt": "2026-07-22 22:26:51 UTC",
+    "district": "West",
+    "id": "cQt7jjLOaHPgBmGCWzdjZm3pojo2",
+    "username": "test-user1",
+    "sidebarVisibility": [
+      "Dashboard",
+      "Physicians",
+      "Pharmacies",
+      "GPS Verified Customers",
+      "Visits",
+      "Medical Planner",
+      "Physician Visit",
+      "My Territory",
+      "Team",
+      "Organization"
+    ],
+    "country": "Libya",
+    "primaryPromotionGroupId": "acne",
+    "loginAllowed": true,
+    "role": "Sales Representative",
+    "firstLoginAt": "2026-07-22T22:05:54.993Z",
+    "areaIds": [
+      "LY-WEST-TRE2"
+    ],
+    "securityScope": "Territory Only",
+    "email": "test-user1@esnad.local",
+    "firstName": "test-user1",
+    "joinedDate": "2026-07-22",
+    "isDeleted": false,
+    "city": "TRIPOLI EAST",
+    "authenticated": true,
+    "assignmentSyncCompletedAt": "2026-07-22T22:05:19.459Z"
+  },
+  "pendingDataBefore": {
+    "status": "Active",
+    "products": [
+      "PROD-2609"
+    ],
+    "territory": "TAJOURA",
+    "companyId": "MENAREPS-CENTRAL",
+    "employmentStatus": "Active",
+    "region": "West",
+    "areaNames": [
+      "TAJOURA"
+    ],
+    "lastName": "",
+    "createdAt": "2026-07-22 22:05:15 UTC",
+    "assignmentSyncRunId": "sync_1784757916554",
+    "active": true,
+    "updatedBy": "GQynj6LObmfQPz6PbNR9poANfXv1",
+    "assignmentSyncExpectedOperations": 2,
+    "assignmentSyncErrorMessage": null,
+    "assignmentSyncStatus": "COMPLETE",
+    "name": "test-user1",
+    "createdBy": "GQynj6LObmfQPz6PbNR9poANfXv1",
+    "managerId": "BlROcJqcCpkFeXSYNVLQ",
+    "territories": [
+      "TAJOURA"
+    ],
+    "role": "Sales Representative",
+    "loginAllowed": true,
+    "primaryPromotionGroupId": "acne",
+    "country": "Libya",
+    "assignmentSyncStartedAt": "2026-07-22T22:05:16.554Z",
+    "sidebarVisibility": [
+      "Dashboard",
+      "Physicians",
+      "Pharmacies",
+      "GPS Verified Customers",
+      "Visits",
+      "Medical Planner",
+      "Physician Visit",
+      "My Territory",
+      "Team",
+      "Organization"
+    ],
+    "assignmentSyncCompletedAt": "2026-07-22T22:05:19.459Z",
+    "city": "TRIPOLI EAST",
+    "joinedDate": "2026-07-22",
+    "isDeleted": false,
+    "email": "test-user1@esnad.local",
+    "firstName": "test-user1",
+    "areaIds": [
+      "LY-WEST-TRE2"
+    ],
+    "securityScope": "Territory Only",
+    "updatedAt": "2026-07-22 22:05:15 UTC",
+    "assignmentSyncCompletedOperations": 2,
+    "managerEmail": "slaestajura@esnad.local",
+    "username": "test-user1@esnad.local",
+    "id": "cyN52057EFCnWV2RukuN",
+    "district": "West",
+    "assignmentSyncErrorCode": null
+  }
+}

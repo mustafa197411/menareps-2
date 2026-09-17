@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-07-27T05:46:00.000Z",
+  "environment": {
+    "projectId": "gen-lang-client-0698936227",
+    "databaseId": "ai-studio-menarepscrmdemos-82d41216-0d5d-449a-a9d4-b65e790e275c",
+    "serviceAccount": "549389908807-compute@developer.gserviceaccount.com"
+  },
+  "blockedServices": [
+    {
+      "service": "identitytoolkit.googleapis.com",
+      "reason": "Identity Toolkit API is disabled or not accessible for project 549389908807"
+    },
+    {
+      "service": "firestore.googleapis.com (Admin SDK)",
+      "reason": "Cloud Run service account lacks IAM permissions (roles/datastore.user) on named database ai-studio-menarepscrmdemos-82d41216-0d5d-449a-a9d4-b65e790e275c"
+    }
+  ],
+  "auditedAccounts": [
+    {
+      "email": "fo@esand.local",
+      "canonicalRole": "Finance Officer",
+      "roleEnum": "Finance Officer",
+      "attemptedLoginUid": "aRSKSRDzldSeL7P9kPShjwCYday1",
+      "attemptedDocFound": false,
+      "primaryOperationalDoc": {
+        "id": "B1LhUXI54pSAa0zC4iVaHTxzHnO2",
+        "name": "Finance Officer",
+        "role": "Finance Officer",
+        "active": true,
+        "employmentStatus": "Active",
+        "loginAllowed": true,
+        "country": "Libya",
+        "district": "National Scope",
+        "securityScope": "National",
+        "readiness": "Operational"
+      },
+      "secondaryOrPendingDocs": [
+        {
+          "id": "lyvWfLx4dryHkezfgSmo",
+          "source": "userActivationProfiles / pending creation",
+          "createdForActivation": true
+        }
+      ],
+      "activationProfileKey": "fo_esand_local",
+      "issueSummary": "Firebase Authentication UID (aRSKSRDzldSeL7P9kPShjwCYday1) is not aligned with primary operational document ID B1LhUXI54pSAa0zC4iVaHTxzHnO2. Non-representative save previously failed due to undefined primaryPromotionGroupId field in setDoc."
+    },
+    {
+      "email": "ooo@esand.local",
+      "canonicalRole": "Order Operations Officer",
+      "roleEnum": "Order Operations Officer",
+      "primaryOperationalDoc": {
+        "id": "MbE6J5DfRpkZ39M16UeO",
+        "name": "Order Operations Officer",
+        "role": "Order Operations Officer",
+        "active": true,
+        "employmentStatus": "Active",
+        "loginAllowed": true,
+        "country": "Libya",
+        "district": "National Scope",
+        "securityScope": "National",
+        "readiness": "Operational"
+      },
+      "secondaryOrPendingDocs": [],
+      "activationProfileKey": "ooo_esand_local",
+      "issueSummary": "Operational document correctly aligned; scope guidance and payload sanitization applied."
+    }
+  ]
+}

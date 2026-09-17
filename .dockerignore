@@ -1,0 +1,34 @@
+# Dependencies & Build Output
+node_modules
+dist
+.npm
+
+# Git & Version Control
+.git
+.gitignore
+
+# Environment & Secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+service-account*.json
+*_backup*
+firebase-applet-config.json.backup
+
+# Local Scripts, Reports & Tests
+reports/
+rules_test_output.txt
+wp52f_rollback_snapshot.json
+*.test.ts
+*.mjs
+inspect_*.ts
+query_*.ts
+repair_*.ts
+check_*.cjs
+audit_*.ts
+
+# System Files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,6 @@
+SKU,Product Name,Brand,Category,Therapeutic Area,Product Type,Price,Stock Quantity,Can Generate Samples,Monthly Rep Sample Limit,Monthly Physician Sample Limit,Sample SKU,Parent Product SKU,Product Line,ATC Classification,Manufacturer,Marketing Status,Package Size,Strength,Prescription Status,Active
+PRD-AMX-500,Amoxil 500mg,Amoxil,Antibiotics,Infectious Diseases,Capsule,22.50,1500,Yes,100,20,No,,Amoxil Line,J01CA04,GlaxoSmithKline,Active,20 Capsules,500mg,Prescription,True
+PRD-AMX-500-SMP,Amoxil 500mg Sample,Amoxil,Antibiotics,Infectious Diseases,Capsule,0.00,200,No,0,0,Yes,PRD-AMX-500,Amoxil Line,J01CA04,GlaxoSmithKline,Active,5 Capsules,500mg,Prescription,True
+PRD-PAN-500,Panadol Advance 500mg,Panadol,Analgesics,Pain Relief,Tablet,4.20,5000,Yes,200,50,No,,Panadol Line,N02BE01,GlaxoSmithKline,Active,24 Tablets,500mg,OTC,True
+PRD-LIP-20,Lipitor 20mg,Lipitor,Cardiovascular,Lipid Regulation,Tablet,45.00,800,Yes,50,15,No,,Lipitor Line,C10AA05,Pfizer,Active,30 Tablets,20mg,Prescription,True
+PRD-DIA-05,Diovan 80mg,Diovan,Cardiovascular,Hypertension,Tablet,35.00,600,Yes,50,10,No,,Diovan Line,C09CA03,Novartis,Pre-launch,28 Tablets,80mg,Prescription,True

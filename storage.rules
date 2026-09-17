@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    match /resources/{promotionGroupId}/{resourceId}/{versionSegment}/{fileName} {
+      // Backend-issued JSON API resumable sessions use bucket IAM. Firebase
+      // clients cannot mutate this backend-owned namespace.
+      allow create, update, delete: if false;
+      
+      // Resource reads are independently authorized and streamed by backend.
+      allow read: if false;
+    }
+
+    // Default deny for all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

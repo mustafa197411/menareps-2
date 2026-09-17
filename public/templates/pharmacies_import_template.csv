@@ -1,0 +1,6 @@
+Pharmacy Name,Pharmacy Name (Arabic),Type,Country,District,City,Area,Address,Contact Person,Phone,Email,Payment Term (Days),Assigned Rep ID,Assigned Supervisor ID,Sales Potential
+Tripoli Al-Hurriya Pharmacy,صيدلية الحرية طرابلس,Retail,Libya,West,Tripoli,Zawiyat Dahmani,Al-Jaraba Street,Mohamed Al-Fitouri,+218 92 7654321,contact@hurriyapharmacy.com,30,omar@menareps.com,fatima@menareps.com,High
+Gargaresh Chain Pharmacy,صيدلية قرقارش,Chain,Libya,West,Tripoli,Gargaresh,Gargaresh Road,Suleiman Al-Hadi,+218 91 8765432,gargaresh@example.com,45,ali@menareps.com,fatima@menareps.com,High
+BMC Hospital Pharmacy,صيدلية مركز بنغازي الطبي,Hospital,Libya,East,Benghazi,Al-Fouwayhat,BMC Inner Road,Dr. Salma Belkacem,+218 91 9876543,bmc_pharm@example.com,60,omar@menareps.com,fatima@menareps.com,Medium
+Abdali Plaza Pharmacy,صيدلية الساحة العبدلي,Retail,Jordan,Amman,Amman,Al-Abdali,Plaza Mall,Samir Al-Faris,+962 6 7890123,abdali_plaza@example.com,15,omar@menareps.com,fatima@menareps.com,High
+Khalda Poly Pharmacy,صيدلية خلدا الشاملة,Polyclinic,Jordan,Amman,Amman,Khalda,Medical Center St.,Laila Obeid,+962 6 8901234,khalda_poly@example.com,30,omar@menareps.com,fatima@menareps.com,Medium

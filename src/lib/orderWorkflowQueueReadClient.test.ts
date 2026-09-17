@@ -1,0 +1,55 @@
+import fs from "node:fs";
+import { describe, expect, it, vi } from "vitest";
+import { createOrderWorkflowQueueReadController, executeOrderOperationsTransition, fetchOrderWorkflowQueue } from "./orderWorkflowQueueReadClient";
+const summary = { kind: "ORDER_WORKFLOW_QUEUE_SUMMARY" as const, orderId: "O1", displayNumber: "SO1", pharmacyId: "P1", pharmacyName: "Pharmacy", representativeName: "Rep", orderDate: "2026-07-01", currentStatus: "FINANCE_APPROVED" as const, stage: "OPERATIONS_REVIEW", itemCount: 1, total: 10, version: "1:2" };
+const user = { getIdToken: vi.fn(async () => "TOKEN") };
+const salesSource = () => fs.readFileSync(new URL("../components/sales/SalesOrders.tsx", import.meta.url), "utf8");
+const clientSource = () => fs.readFileSync(new URL("./orderWorkflowQueueReadClient.ts", import.meta.url), "utf8");
+describe("WP5.2F.6B.1 queue client and role isolation", () => {
+  it("33. queue client sends bearer token", async () => { const fetcher = vi.fn(async () => ({ json: async () => ({ authorized: true, orders: [summary] }) })); await fetchOrderWorkflowQueue(user, {}, fetcher as any); expect(fetcher.mock.calls[0][1].headers.Authorization).toBe("Bearer TOKEN"); });
+  it("34. token not logged or persisted", () => expect(clientSource()).not.toMatch(/console\.|localStorage|sessionStorage/));
+  it("35. malformed response fails closed", async () => await expect(fetchOrderWorkflowQueue(user, {}, vi.fn(async () => ({ json: async () => ({ authorized: true }) })) as any)).rejects.toThrow("Malformed"));
+  it("36. logout clear empties queue", async () => { const c = createOrderWorkflowQueueReadController(async () => ({ authorized: true, orders: [summary] })); await c.load("U", user); c.clear(); expect(c.getState()).toEqual({ status: "UNINITIALIZED", actorUid: null, orders: [] }); });
+  it("37. UID change clears prior queue", async () => { let done!: (value: any) => void; const c = createOrderWorkflowQueueReadController(() => new Promise((resolve) => { done = resolve; })); const pending = c.load("U2", user); expect(c.getState()).toEqual({ status: "LOADING", actorUid: "U2", orders: [] }); done({ authorized: true, orders: [] }); await pending; });
+  it("38. stale queue response rejected", async () => { let old!: (value: any) => void; const c = createOrderWorkflowQueueReadController((_u: any, controls: any) => controls.cursor ? Promise.resolve({ authorized: true, orders: [] }) : new Promise((resolve) => { old = resolve; })); const first = c.load("U", user); await c.load("U", user, { cursor: "NEW" }); old({ authorized: true, orders: [summary] }); await first; expect(c.getState().orders).toEqual([]); });
+  it("39. Operations wrapper does not mount legacy listener", () => expect(salesSource()).toContain("activeRole === Role.ORDER_OPS_OFFICER"));
+  it("40. other roles retain LegacySalesOrders", () => expect(salesSource()).toContain(": <LegacySalesOrders {...props} />"));
+  it("41. selection never sets summary as selectedOrderDetail", () => expect(salesSource()).not.toContain("setSelectedOrderDetail(summary)"));
+  it("42. selection loads authoritative detail controller", () => expect(salesSource()).toContain("detailController.current.load(actorUid, summary.orderId"));
+  it("43. detail denial blocks actions", () => expect(salesSource()).toContain('detailState.status !== "READY"'));
+  it("44. action uses transition endpoint", () => expect(clientSource()).toContain('"/api/orders/workflow/transition"'));
+  it("45. expectedVersion comes from detail", () => expect(salesSource()).toContain("expectedVersion: detail.version"));
+  it("46. Operations workspace never calls saveOrder", () => expect(salesSource().slice(salesSource().indexOf("function CanonicalOrderOperationsWorkspace"), salesSource().indexOf("function LegacySalesOrders"))).not.toContain("saveOrder("));
+  it("47. Operations workspace never calls applyOrderTransition", () => expect(salesSource().slice(salesSource().indexOf("function CanonicalOrderOperationsWorkspace"), salesSource().indexOf("function LegacySalesOrders"))).not.toContain("applyOrderTransition("));
+  it("48. stale conflict displayed without retry", () => expect(salesSource()).toContain('transitionState.code === "STALE_ORDER_VERSION"'));
+  it("49. success clears detail and reloads queue", () => { const source = salesSource(); expect(source).toContain("detailController.current.clear()"); expect(source).toContain("await loadQueue()"); });
+  it("50. queue DTO differs from detail DTO", () => expect(clientSource()).not.toContain("AUTHORITATIVE_ORDER_OPERATIONS_DETAIL"));
+  it("51. detail DTO differs from transition request", () => expect(salesSource()).toContain("expectedStatus: detail.currentStatus"));
+  it("52. persisted Order stays legacy-only", () => expect(salesSource().indexOf("interface Order {")).toBeGreaterThan(-1));
+  it("53. transition service semantics unchanged", () => expect(fs.readFileSync(new URL("../../server/orderOperationsTransitionService.ts", import.meta.url), "utf8")).not.toContain("QueueSummary"));
+  it("54. detail service semantics unchanged", () => expect(fs.readFileSync(new URL("../../server/orderWorkflowDetailReadService.ts", import.meta.url), "utf8")).not.toContain("QueueSummary"));
+  it("55. G.1 unchanged", () => expect(fs.readFileSync(new URL("../../server/workflowQueueScopeService.ts", import.meta.url), "utf8")).not.toContain("QueueSummary"));
+  it("56. WP5.2E unchanged", () => expect(fs.readFileSync(new URL("../../server/operationalScopeService.ts", import.meta.url), "utf8")).not.toContain("WORKFLOW_QUEUE"));
+  it("57. workflow engine unchanged", () => expect(fs.readFileSync(new URL("../features/orders/orderWorkflowEngine.ts", import.meta.url), "utf8")).not.toContain("QueueSummary"));
+  for (const [number, marker] of [[58, "isFinanceOfficer"], [59, "isSupervisor"], [60, "isWarehouseStaff"], [61, "isDeliveryStaff"], [62, "isSalesRep"]] as const) it(`${number}. legacy ${marker} behavior retained`, () => expect(salesSource()).toContain(marker));
+  it("63. payment behavior remains legacy-only", () => expect(salesSource()).toContain("handleApplyInlineFinanceDecision"));
+  it("64. visit behavior untouched by candidate", () => expect(clientSource()).not.toContain("visit"));
+  it("65. samples untouched", () => expect(clientSource()).not.toContain("sample"));
+  it("66. Planner untouched", () => expect(clientSource()).not.toContain("Planner"));
+  it("67. Analytics untouched", () => expect(clientSource()).not.toContain("Analytics"));
+  it("68. no rules workaround", () => expect(clientSource()).not.toContain("firestore.rules"));
+  it("69. no schema workaround", () => expect(clientSource()).not.toContain("schema"));
+  it("70. package manifests unchanged by client", () => expect(clientSource()).not.toContain("package.json"));
+  it("transition fetch returns typed denial", async () => { const fetcher = vi.fn(async () => ({ json: async () => ({ success: false, code: "STALE_ORDER_VERSION" }) })); expect(await executeOrderOperationsTransition(user, { orderId: "O1", action: "OPERATIONS_APPROVE", expectedStatus: "FINANCE_APPROVED", expectedVersion: "1:2" }, fetcher as any)).toEqual({ success: false, code: "STALE_ORDER_VERSION" }); });
+});
+
+it("rejects malformed per-Order market context without accepting the queue", async () => {
+  await expect(fetchOrderWorkflowQueue(user, {}, vi.fn(async () => ({ json: async () => ({ authorized: true, orders: [{ ...summary, marketContext: { status: "RESOLVED", market: {} } }] }) })) as any)).rejects.toThrow("Malformed");
+});
+it("keeps uncertified queue aggregates unresolved and formats rows by their own context", () => {
+  const source = salesSource();
+  expect(source).toContain('summary.marketContext?.status === "RESOLVED" ? [summary.marketContext.market] : []');
+  expect(source).not.toContain("currency.format(summary.total)");
+  expect(source).not.toContain("currency.format(queueValue)");
+  expect(source).toContain("The queue contract does not certify a single aggregate currency.");
+});

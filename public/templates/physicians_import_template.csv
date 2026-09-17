@@ -1,0 +1,6 @@
+Physician Name,Physician Name (Arabic),Specialty,Segment,Key Opinion Leader,Country,District,City,Area,Address,Clinic/Hospital Name,Sector,Phone,Email,Target Frequency (Visits/Month),Assigned Rep ID,Assigned Supervisor ID,Assigned Manager ID
+Dr. Ahmed Hassan,د. أحمد حسن,Cardiology,A,Yes,Libya,West,Tripoli,Zawiyat Dahmani,Central Hospital Road,City Clinic,Private,+218 91 1234567,dr.ahmed@example.com,4,omar@menareps.com,fatima@menareps.com,mustafa@menareps.com
+Dr. Leila Mahmoud,د. ليلى محمود,Pediatrics,B,No,Libya,West,Tripoli,Gargaresh,Gargaresh Seaside Road,Seaside Pediatric Clinic,Private,+218 92 2345678,leila@example.com,2,ali@menareps.com,fatima@menareps.com,mustafa@menareps.com
+Dr. Kamal Tarhuni,د. كمال الترهوني,Internal Medicine,C,No,Libya,East,Benghazi,Al-Fouwayhat,Benghazi Medical Center,BMC,Public,+218 91 3456789,kamal@example.com,1,omar@menareps.com,fatima@menareps.com,mustafa@menareps.com
+Dr. Rania Masri,د. رانيا المصري,Dermatology,A,Yes,Jordan,Amman,Amman,Al-Abdali,Abdali Medical Center,AMC,Private,+962 6 5678901,rania@example.com,6,omar@menareps.com,fatima@menareps.com,mustafa@menareps.com
+Dr. Yusuf Haddad,د. يوسف حداد,Endocrinology,B,No,Jordan,Amman,Amman,Khalda,Khalda Circle,Khalda Specialized Center,NGO,+962 6 6789012,yusuf@example.com,3,omar@menareps.com,fatima@menareps.com,mustafa@menareps.com

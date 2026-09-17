@@ -1,0 +1,8 @@
+import { describe, expect, it } from "vitest"; import { LIBYA_MARKET_DEFAULT } from "./marketSettings"; import { isoWeekDates, plannerWorkingDays, plannerWeekRange, rollingPlannerPeriods, workingDayNames } from "./plannerCalendar";
+describe("WP77 calendar-driven planners", () => {
+  it("uses market working weekdays", () => expect(workingDayNames(LIBYA_MARKET_DEFAULT)).toEqual(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"]));
+  it("derives periods from current time", () => expect(rollingPlannerPeriods(new Date("2026-08-16T00:00:00Z"))).toEqual({ weeks: ["2026-W33", "2026-W34", "2026-W35", "2026-W36"], months: ["2026-08", "2026-09", "2026-10"] }));
+  it("derives weekly planner days from regional settings and excludes non-working days", () => { const days = plannerWorkingDays("2026-W35", { ...LIBYA_MARKET_DEFAULT, workingWeekdays: [0, 2, 6] }, []); expect(days.map(day => day.name)).toEqual(["Sunday", "Tuesday", "Saturday"]); expect(days.map(day => day.date)).toEqual(["2026-08-30", "2026-08-25", "2026-08-29"]); expect(days.some(day => day.name === "Friday")).toBe(false); });
+  it("applies canonical regional calendar exceptions", () => { const market = { ...LIBYA_MARKET_DEFAULT, marketId: "M", countryId: "C" }; const days = plannerWorkingDays("2026-W35", market, [{ id: "E", marketId: "M", countryId: "C", date: "2026-08-25", active: true, type: "PUBLIC", nameEn: "x", nameAr: "x", createdBy: "x", createdAt: "", updatedBy: "x", updatedAt: "" }]); expect(days.map(day => day.date)).not.toContain("2026-08-25"); });
+  it("formats the selected ISO week range", () => { expect(isoWeekDates("2026-W35")).toHaveLength(7); expect(plannerWeekRange("2026-W35")).toContain("Aug"); });
+});

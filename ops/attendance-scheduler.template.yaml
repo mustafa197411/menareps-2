@@ -1,0 +1,21 @@
+# Configuration template only. Replace every ${...} value during an approved deployment.
+name: projects/${PROJECT_ID}/locations/${REGION}/jobs/menareps-attendance-recovery
+description: Hourly canonical market-time attendance recovery
+schedule: "0 * * * *"
+timeZone: Etc/UTC
+attemptDeadline: 300s
+httpTarget:
+  uri: ${SERVICE_URL}/api/internal/attendance/recover
+  httpMethod: POST
+  headers:
+    Content-Type: application/json
+  body: e30=
+  oidcToken:
+    serviceAccountEmail: ${SCHEDULER_SERVICE_ACCOUNT_EMAIL}
+    audience: ${ATTENDANCE_SCHEDULER_AUDIENCE}
+retryConfig:
+  retryCount: 5
+  maxRetryDuration: 3600s
+  minBackoffDuration: 60s
+  maxBackoffDuration: 600s
+  maxDoublings: 3

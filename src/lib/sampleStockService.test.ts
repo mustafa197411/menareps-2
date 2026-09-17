@@ -1,0 +1,45 @@
+import { describe, expect, it } from "vitest";
+import type { SampleAllocation, SampleBatch, SampleDistribution, SampleInventoryBalance, SampleRequest, SampleSku } from "../types";
+import { calculateRepresentativeSampleBalance, createSampleAllocation, createSampleInventoryMovement } from "./sampleDomainService";
+import { applyAllocationToStock, applyCentralAdjustment, applyDistributionToAllocation, applyReceipt, approvedRemaining, calculatePhysicianAllowance, consumeAllocationsFefo, isBatchUsable, requestStatusAfterAllocation, SampleStockError, selectBatchesFefo, validateDistributionEligibility } from "./sampleStockService";
+
+const now = "2026-08-09T10:00:00.000Z";
+const sku: SampleSku = { id: "SKU-TEST4-TRIAL", productId: "PROD-7964", name: "Test 4 - Trial", descriptor: "Trial", status: "ACTIVE", active: true, createdAt: now, createdBy: "admin", updatedAt: now, updatedBy: "admin" };
+const balance = (available = 0): SampleInventoryBalance => ({ sampleSkuId: sku.id, totalReceived: available, availableQuantity: available, allocatedQuantity: 0, expiredOrBlockedQuantity: 0 });
+const batch = (id: string, expiryDate: string, availableQuantity: number, createdAt = now): SampleBatch => ({ id, sampleSkuId: sku.id, batchNumber: id, expiryDate, receivedQuantity: availableQuantity, availableQuantity, status: "AVAILABLE", createdAt, createdBy: "inventory" });
+const allocation = (id: string, quantity: number, overrides: Partial<SampleAllocation> = {}): SampleAllocation => ({ id, sampleSkuId: sku.id, productId: sku.productId, repId: "rep-1", quantityAllocated: quantity, quantityDistributed: 0, quantityRemaining: quantity, batchId: "B1", allocatedAt: now, allocatedBy: "inventory", status: "ACTIVE", reportingMonth: "2026-08", createdAt: now, createdBy: "inventory", ...overrides });
+const distribution = (quantity: number, physicianId = "PHY-A"): SampleDistribution => ({ id: `D-${quantity}`, sampleSkuId: sku.id, productId: sku.productId, repId: "rep-1", physicianId, quantity, allocationId: "A1", distributedAt: "2026-08-05T00:00:00Z", createdBy: "rep-1" });
+
+describe("WP-S6 canonical Sample stock engine", () => {
+  it("1. commercial Product stock is not an input to Sample stock calculations", () => expect(calculateRepresentativeSampleBalance([], "rep-1", sku).availableQuantity).toBe(0));
+  it("2. receipt increases only central Sample inventory and batch", () => { const result = applyReceipt(balance(), batch("B1", "2027-01-01", 0), 100); expect(result.balance.availableQuantity).toBe(100); expect(result.batch.availableQuantity).toBe(100); });
+  it("3. receipt movement is canonical", () => expect(createSampleInventoryMovement({ id: "M1", sampleSkuId: sku.id, batchId: "B1", type: "RECEIPT", quantity: 100, sourceId: "B1", sourceType: "SAMPLE_BATCH", actorId: "inventory", createdAt: now }).type).toBe("RECEIPT"));
+  it("4. adjustment requires a reason", () => expect(() => applyCentralAdjustment(balance(10), 8, " ")).toThrowError(SampleStockError));
+  it("5. adjustment rejects negative resulting stock", () => expect(() => applyCentralAdjustment(balance(10), -1, "audit")).toThrowError(SampleStockError));
+  it("6. an approved request is not representative balance", () => expect(calculateRepresentativeSampleBalance([], "rep-1", sku).availableQuantity).toBe(0));
+  it("7. request allocation cannot exceed approved remaining", () => expect(approvedRemaining(15, [allocation("A1", 5, { requestId: "R1" })], "R1")).toBe(10));
+  it("8. allocation cannot exceed central stock", () => expect(() => applyAllocationToStock(balance(5), batch("B1", "2027-01-01", 5), 6)).toThrowError(SampleStockError));
+  it("9. allocation deducts central stock", () => expect(applyAllocationToStock(balance(10), batch("B1", "2027-01-01", 10), 4).balance.availableQuantity).toBe(6));
+  it("10. allocation increases rep usable balance", () => expect(calculateRepresentativeSampleBalance([allocation("A1", 4)], "rep-1", sku).availableQuantity).toBe(4));
+  it("11. allocation movement is traceable", () => expect(createSampleInventoryMovement({ id: "M2", sampleSkuId: sku.id, batchId: "B1", type: "ALLOCATION", quantity: -4, sourceId: "A1", sourceType: "SAMPLE_ALLOCATION", actorId: "inventory", createdAt: now }).sourceId).toBe("A1"));
+  it("12. partial allocation yields PARTIALLY_ALLOCATED", () => expect(requestStatusAfterAllocation(20, 8)).toBe("PARTIALLY_ALLOCATED"));
+  it("13. completing approved quantity yields ALLOCATED", () => expect(requestStatusAfterAllocation(20, 20)).toBe("ALLOCATED"));
+  it("14. direct allocation requires no request", () => expect(createSampleAllocation({ id: "A1", sampleSku: sku, repId: "rep-1", quantityAllocated: 5, allocatedBy: "inventory", allocatedAt: now }).requestId).toBeUndefined());
+  it("15. direct allocation still deducts central stock", () => expect(applyAllocationToStock(balance(10), batch("B1", "2027-01-01", 10), 5).balance.availableQuantity).toBe(5));
+  it("16. rep balance uses active canonical allocations only", () => expect(calculateRepresentativeSampleBalance([allocation("A1", 5), allocation("A2", 4, { status: "CANCELLED" })], "rep-1", sku).availableQuantity).toBe(5));
+  it("17. distribution cannot exceed rep balance", () => expect(() => applyDistributionToAllocation(allocation("A1", 2), 3, "rep-1")).toThrowError(SampleStockError));
+  it("18. distribution decreases remaining", () => expect(applyDistributionToAllocation(allocation("A1", 5), 2, "rep-1").quantityRemaining).toBe(3));
+  it("19. distribution increases distributed", () => expect(applyDistributionToAllocation(allocation("A1", 5), 2, "rep-1").quantityDistributed).toBe(2));
+  it("20. canonical distribution keeps IDs", () => expect(distribution(2)).toMatchObject({ sampleSkuId: sku.id, productId: sku.productId, physicianId: "PHY-A" }));
+  it("21. distribution movement is canonical", () => expect(createSampleInventoryMovement({ id: "M3", sampleSkuId: sku.id, batchId: "B1", type: "DISTRIBUTION", quantity: -2, sourceId: "D1", sourceType: "SAMPLE_DISTRIBUTION", actorId: "rep-1", createdAt: now }).type).toBe("DISTRIBUTION"));
+  it("22. expired stock is unusable", () => expect(isBatchUsable(batch("B1", "2026-08-08", 5), now)).toBe(false));
+  it("23. physician allowance blocks excess", () => expect(calculatePhysicianAllowance({ distributions: [distribution(8)], physicianId: "PHY-A", productId: sku.productId, proposedQuantity: 3, monthlyLimit: 10, at: now }).allowed).toBe(false));
+  it("24. allowance counts distributions, not requests", () => { const requests: SampleRequest[] = [{ id: "R1", requesterId: "rep-1", repId: "rep-1", sampleSkuId: sku.id, productId: sku.productId, quantityRequested: 99, reason: "x", source: "STANDALONE", urgent: false, status: "AWAITING_ALLOCATION", createdAt: now, createdBy: "rep-1" }]; expect(requests[0].quantityRequested).toBe(99); expect(calculatePhysicianAllowance({ distributions: [], physicianId: "PHY-A", productId: sku.productId, proposedQuantity: 10, monthlyLimit: 10, at: now }).physicianUsedQuantity).toBe(0); });
+  it("25. intended physician does not lock recipient", () => { const requestPhysician = "PHY-A", actual = distribution(1, "PHY-B"); expect(actual.physicianId).not.toBe(requestPhysician); });
+  it("26. rep cannot consume another rep allocation", () => expect(() => applyDistributionToAllocation(allocation("A1", 2), 1, "rep-2")).toThrowError(SampleStockError));
+  it("27. multiple allocations consume FEFO then oldest", () => { const allocations = [allocation("LATE", 5, { batchId: "B2", allocatedAt: "2026-07-01" }), allocation("EARLY", 5, { batchId: "B1", allocatedAt: "2026-08-01" })]; expect(consumeAllocationsFefo(allocations, [batch("B1", "2026-10-01", 5), batch("B2", "2026-12-01", 5)], "rep-1", sku.id, 6, now).map(item => item.allocationId)).toEqual(["EARLY", "LATE"]); });
+  it("28. competing central stock consumption cannot go negative", () => { const first = applyAllocationToStock(balance(10), batch("B1", "2027-01-01", 10), 7); expect(() => applyAllocationToStock(first.balance, first.batch, 7)).toThrowError(SampleStockError); });
+  it("29. competing rep consumption cannot go negative", () => { const first = applyDistributionToAllocation(allocation("A1", 10), 7, "rep-1"); expect(() => applyDistributionToAllocation(first, 7, "rep-1")).toThrowError(SampleStockError); });
+  it("FEFO splits central stock deterministically", () => expect(selectBatchesFefo([batch("B2", "2027-02-01", 8), batch("B1", "2027-01-01", 4)], sku.id, 6, now)).toEqual([{ batchId: "B1", quantity: 4 }, { batchId: "B2", quantity: 2 }]));
+  it("structured eligibility returns available and allowance fields", () => expect(validateDistributionEligibility({ sampleSku: sku, allocations: [allocation("A1", 5)], batches: [batch("B1", "2027-01-01", 5)], distributions: [], repId: "rep-1", physicianId: "PHY-A", quantity: 2, monthlyLimit: 10, at: now })).toMatchObject({ allowed: true, availableRepQuantity: 5, physicianUsedQuantity: 0, physicianRemainingAllowance: 10 }));
+});

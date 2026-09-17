@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-07-27T05:46:00.000Z",
+  "dryRunMode": true,
+  "deletionsExecuted": false,
+  "documentsPurged": false,
+  "proposedMigrationActions": [
+    {
+      "action": "ALIGN_AUTH_UID_TO_FIRESTORE_DOC",
+      "targetEmail": "fo@esand.local",
+      "currentAuthUid": "aRSKSRDzldSeL7P9kPShjwCYday1",
+      "targetFirestoreDocId": "B1LhUXI54pSAa0zC4iVaHTxzHnO2",
+      "pendingDuplicateDocId": "lyvWfLx4dryHkezfgSmo",
+      "activationProfileKey": "fo_esand_local",
+      "status": "PENDING_ADMIN_IAM_APPROVAL",
+      "safeExecutionPlan": [
+        "1. Grant roles/datastore.user to service account 549389908807-compute@developer.gserviceaccount.com on database ai-studio-menarepscrmdemos-82d41216-0d5d-449a-a9d4-b65e790e275c.",
+        "2. Enable Identity Toolkit API for project 549389908807.",
+        "3. Update userActivationProfiles/fo_esand_local linking linkedToUid to Auth UID.",
+        "4. Copy operational data from B1LhUXI54pSAa0zC4iVaHTxzHnO2 to Auth UID doc if Auth UID is fixed, or set Auth custom user id to B1LhUXI54pSAa0zC4iVaHTxzHnO2."
+      ]
+    }
+  ],
+  "codeFixesApplied": [
+    {
+      "file": "src/utils/importNormalization.ts",
+      "description": "Provided sanitizeAndAuditPayload and removeUndefinedRecursively to strip undefined values prior to Firestore setDoc/updateDoc calls."
+    },
+    {
+      "file": "src/components/UserManagement.tsx",
+      "description": "Integrated removeUndefinedRecursively and sanitizeAndAuditPayload in handleSaveUserForm and saveActivationProfileWithDiagnostics to eliminate 'Unsupported field value: undefined' errors for non-representative users (Finance Officer, Order Operations Officer). Added Order Officer scope recommendation banner and hidden representative product/area assignment controls for Order Officers."
+    },
+    {
+      "file": "firestore.rules",
+      "description": "Updated orders access rules with isOrderInFinanceStage and isOrderInOpsStage helpers to enforce country-scoped and stage-scoped access for Finance Officer and Order Operations Officer."
+    }
+  ]
+}

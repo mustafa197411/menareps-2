@@ -1,0 +1,6 @@
+Username,First Name,Last Name,Email,Manager Email,Role,Country,District,City,Area Codes,Area Names,Active
+omar_mokhtar,Omar,Al-Mokhtar,omar@menareps.com,manager@menareps.com,Medical Representative,Libya,West,Tripoli,"LY-WEST-TRIP-ZDH,LY-WEST-TRIP-GAR","Zawiyat Dahmani,Gargaresh",True
+ali_ghaddafi,Ali,Ghaddafi,ali@menareps.com,manager@menareps.com,Medical Representative,Libya,West,Tripoli,LY-WEST-TRIP-GAR,Gargaresh,True
+mustafa_shwayat,Mustafa,Shwayat,mustafa@menareps.com,director@menareps.com,Country Manager,Jordan,Amman,Amman,JO-AMM-AMM-ABD,Al-Abdali,True
+fatima_alami,Fatima,Alami,fatima@menareps.com,mustafa@menareps.com,Medical Supervisor,Jordan,Amman,Amman,JO-AMM-AMM-KHL,Khalda,True
+finance_officer_sami,Sami,Khoury,sami@menareps.com,director@menareps.com,Finance Officer,Jordan,Amman,Amman,JO-AMM-AMM-ABD,Al-Abdali,True

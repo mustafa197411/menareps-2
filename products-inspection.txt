@@ -1,0 +1,56 @@
+ID | SKU | Name | IsActive (data.isActive) | Active (data.active) | rawData
+=========================================================================
+PROD-1116 | TEST-COMM-001 | TEST-COMM-001 | true | N/A
+PROD-2184 | TEST-COMM-002 | TEST-COMM-002 | true | N/A
+PROD-243 | PROD-559 | Test Product | true | N/A
+PROD-2609 | Test | Test | true | N/A
+PROD-3768 | TEST-SAMPLE-001 | TEST-SAMPLE-001 | true | N/A
+PROD-6043 | 111545 | DELICE SOLUTION 50ML  Aerosol | true | N/A
+PROD-667 | PROD-616 | new | true | N/A
+70 | 70 | AQUAX DEO CREAM | true | N/A
+71 | 71 | AQUAX REPELLANT CREAM | true | N/A
+72 | 72 | AQUAX WHITENING CREAM | true | N/A
+73 | 73 | CORNEX GEL | true | N/A
+74 | 74 | DERMA ANTI-WRINKLES CREAM | true | N/A
+75 | 75 | DEAMA HAND REPAIR CREAM | true | N/A
+77 | 77 | DERMA LIGHTENING CREAM | true | N/A
+78 | 78 | DERMA LIP PLUMPER BALM | true | N/A
+79 | 79 | DERMA UNDER EYE GEL | true | N/A
+80 | 80 | MOSTAL SOLUTION | true | N/A
+81 | 81 | PHOTOBLOCK CREAM | true | N/A
+82 | 82 | PHOTOBLOCK GEL | true | N/A
+83 | 83 | PHOTOBLOCK PLUS | true | N/A
+84 | 84 | SORAFINE CREAMOGEL | true | N/A
+85 | 85 | ERAMAX MILD | true | N/A
+86 | 86 | FLOREXA CREAM | true | N/A
+87 | 87 | TACRUS 0.1% OINTMENT | true | N/A
+88 | 88 | TRIDERMA CREAM | true | N/A
+151 | 151 | DELICE SOLUTION 50ML BOTTLE | true | N/A
+152 | 152 | AQUAX CREAM 150GM | true | N/A
+171 | 171 | PHOTOBLOCK FOAM | true | N/A
+172 | 172 | AQUAX PLUS FOAM | true | N/A
+173 | 173 | SORAFINE FOAM | true | N/A
+202 | 202 | AQUAX-H CREAM 30G | true | N/A
+203 | 203 | SPOTEX GEL 30G | true | N/A
+204 | 204 | ZDNA ZUDO CREAM 100 G | true | N/A
+205 | 205 | ZDNA SILI-COTE CREAM 25G | true | N/A
+206 | 206 | GENGICURE GEL | true | N/A
+207 | 207 | MOSTAL LASHES 10ML | true | N/A
+218 | 218 | DERMA CHARCOAL MASK | true | N/A
+219 | 219 | TACRUS 0.1% OINTMENT 10GM | true | N/A
+291 | 291 | MOSTAL KIT 3PCS | true | N/A
+292 | 292 | DERMA LUMINOUS CREAM 50 G | true | N/A
+293 | 293 | DERMA GLIDE GEL 50G | true | N/A
+303 | 303 | FACIAL CLEANSER NORMAL SKIN 150ML | true | N/A
+304 | 304 | FACIAL CLEANSER SENSITIVE &DRY SKIN 150ML | true | N/A
+305 | 305 | ACNE WASH OILY SKIN 150ML | true | N/A
+306 | 306 | ACNE CARE 25G | true | N/A
+307 | 307 | SUNSCREEN ADVANCE  CREAM - GEL SUNSCREEN 50G | true | N/A
+308 | 308 | CALM CREAM SOOTHING MOISTURIZING CREAM 75G | true | N/A
+309 | 309 | INTIMATE SHAVE CREAM 90G | true | N/A
+310 | 310 | INTIMATE BRIGHTENING CREAM 40G | true | N/A
+311 | 311 | WOUND - EAZ CREAM 25G | true | N/A
+312 | 312 | ACNIPARE GEL 30G | true | N/A
+313 | 313 | SORICAL  -B OINTMENT 30G | true | N/A
+314 | 314 | ADACLINE GEL 30G | true | N/A
+315 | 315 | pro-ac gel 30g | true | N/A
